@@ -1,1 +1,355 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>MAX UI Демо</title>
+    
+    <!-- Подключаем React 18 -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Подключаем Babel для поддержки JSX в браузере (для теста) -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Подключаем MAX UI через unpkg (UMD сборка) -->
+    <link rel="stylesheet" href="https://unpkg.com/@maxhub/max-ui@0.5.0/dist/styles.css" />
+    <script src="https://unpkg.com/@maxhub/max-ui@0.5.0/dist/index.umd.js"></script>
+    
+    <style>
+        /* Небольшие кастомные стили для лучшего отображения демо */
+        body {
+            margin: 0;
+            background: #f5f5f7;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+        .demo-section {
+            margin-bottom: 24px;
+        }
+        .demo-section-title {
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: #666;
+        }
+        .demo-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+        }
+        .demo-col {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
 
+    <script type="text/babel">
+        // Проверяем, загрузилась ли библиотека MAX UI
+        if (typeof MaxUI === 'undefined') {
+            document.getElementById('root').innerHTML = '<div style="padding: 20px; color: red;">Ошибка: библиотека MAX UI не загрузилась. Проверьте интернет-соединение.</div>';
+        }
+
+        // Деструктурируем компоненты из глобального объекта MaxUI
+        const {
+            MaxUI,
+            Panel,
+            Button,
+            IconButton,
+            Input,
+            Textarea,
+            Switch,
+            Avatar,
+            CellList,
+            CellSimple,
+            CellAction,
+            CellHeader,
+            Spinner,
+            Counter,
+            Typography,
+            Flex,
+            Grid,
+            ToolButton
+        } = MaxUI;
+
+        // Простые SVG-иконки для демонстрации IconButton и ToolButton
+        const SearchIcon = () => (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="11" cy="11" r="8" />
+                <path d="m21 21-4.35-4.35" />
+            </svg>
+        );
+
+        const MoreIcon = () => (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <circle cx="12" cy="12" r="2" />
+                <circle cx="19" cy="12" r="2" />
+                <circle cx="5" cy="12" r="2" />
+            </svg>
+        );
+
+        const EditIcon = () => (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+            </svg>
+        );
+
+        const CloseIcon = () => (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M18 6 6 18" />
+                <path d="m6 6 12 12" />
+            </svg>
+        );
+
+        const HomeIcon = () => (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                <polyline points="9 22 9 12 15 12 15 22" />
+            </svg>
+        );
+
+        // Приложение с демонстрацией компонентов
+        const App = () => {
+            const [inputValue, setInputValue] = React.useState('');
+            const [textareaValue, setTextareaValue] = React.useState('');
+            const [switchOn, setSwitchOn] = React.useState(false);
+
+            return (
+                <MaxUI platform="ios" colorScheme="light">
+                    <Panel centeredX centeredY style={{ padding: '20px', minHeight: '100vh' }}>
+                        <div style={{ width: '100%', maxWidth: '480px', margin: '0 auto' }}>
+                            
+                            {/* Заголовок */}
+                            <Typography.Display style={{ marginBottom: '8px' }}>
+                                MAX UI Демо
+                            </Typography.Display>
+                            <Typography.Body style={{ color: '#666', marginBottom: '24px' }}>
+                                Демонстрация компонентов библиотеки
+                            </Typography.Body>
+
+                            {/* Кнопки */}
+                            <div className="demo-section">
+                                <Typography.Title level={3} className="demo-section-title">
+                                    Кнопки
+                                </Typography.Title>
+                                <div className="demo-row">
+                                    <Button>Primary</Button>
+                                    <Button appearance="secondary">Secondary</Button>
+                                    <Button appearance="ghost">Ghost</Button>
+                                    <Button loading>Loading</Button>
+                                    <Button disabled>Disabled</Button>
+                                </div>
+                            </div>
+
+                            {/* Иконочные кнопки */}
+                            <div className="demo-section">
+                                <Typography.Title level={3} className="demo-section-title">
+                                    Иконочные кнопки
+                                </Typography.Title>
+                                <div className="demo-row">
+                                    <IconButton>
+                                        <SearchIcon />
+                                    </IconButton>
+                                    <IconButton variant="secondary">
+                                        <MoreIcon />
+                                    </IconButton>
+                                    <IconButton variant="ghost">
+                                        <CloseIcon />
+                                    </IconButton>
+                                    <IconButton variant="destructive">
+                                        <CloseIcon />
+                                    </IconButton>
+                                    <IconButton disabled>
+                                        <EditIcon />
+                                    </IconButton>
+                                </div>
+                            </div>
+
+                            {/* ToolButton */}
+                            <div className="demo-section">
+                                <Typography.Title level={3} className="demo-section-title">
+                                    ToolButton
+                                </Typography.Title>
+                                <div className="demo-row">
+                                    <ToolButton icon={<SearchIcon />} />
+                                    <ToolButton icon={<EditIcon />}>
+                                        Редактировать
+                                    </ToolButton>
+                                    <ToolButton icon={<MoreIcon />} appearance="secondary">
+                                        Ещё
+                                    </ToolButton>
+                                    <ToolButton icon={<HomeIcon />} disabled>
+                                        Домой
+                                    </ToolButton>
+                                </div>
+                            </div>
+
+                            {/* Поля ввода */}
+                            <div className="demo-section">
+                                <Typography.Title level={3} className="demo-section-title">
+                                    Поля ввода
+                                </Typography.Title>
+                                <div className="demo-col">
+                                    <Input
+                                        placeholder="Введите текст..."
+                                        value={inputValue}
+                                        onChange={(e) => setInputValue(e.target.value)}
+                                    />
+                                    <Textarea
+                                        placeholder="Введите многострочный текст..."
+                                        value={textareaValue}
+                                        onChange={(e) => setTextareaValue(e.target.value)}
+                                        rows={3}
+                                    />
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                        <Switch
+                                            checked={switchOn}
+                                            onChange={(e) => setSwitchOn(e.target.checked)}
+                                        />
+                                        <Typography.Body>
+                                            Переключатель {switchOn ? 'включён' : 'выключен'}
+                                        </Typography.Body>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Аватары */}
+                            <div className="demo-section">
+                                <Typography.Title level={3} className="demo-section-title">
+                                    Аватары
+                                </Typography.Title>
+                                <div className="demo-row">
+                                    <Avatar.Container size={48} form="circle">
+                                        <Avatar.Image src="https://i.pravatar.cc/150?img=1" />
+                                    </Avatar.Container>
+                                    <Avatar.Container size={48} form="squircle">
+                                        <Avatar.Image src="https://i.pravatar.cc/150?img=2" />
+                                    </Avatar.Container>
+                                    <Avatar.Container size={64} form="circle">
+                                        <Avatar.Image src="https://i.pravatar.cc/150?img=3" />
+                                    </Avatar.Container>
+                                    <Avatar.Container 
+                                        size={64} 
+                                        form="squircle"
+                                        rightTopCorner={
+                                            <Avatar.CloseButton onClick={() => alert('Закрыть')} />
+                                        }
+                                    >
+                                        <Avatar.Image src="https://i.pravatar.cc/150?img=4" />
+                                    </Avatar.Container>
+                                </div>
+                            </div>
+
+                            {/* Спиннеры и счётчики */}
+                            <div className="demo-section">
+                                <Typography.Title level={3} className="demo-section-title">
+                                    Спиннеры и счётчики
+                                </Typography.Title>
+                                <div className="demo-row">
+                                    <Spinner size="small" />
+                                    <Spinner />
+                                    <Spinner size="large" />
+                                    <Counter value={5} />
+                                    <Counter value={1200} />
+                                    <Counter value={5600000} />
+                                </div>
+                            </div>
+
+                            {/* Список ячеек */}
+                            <div className="demo-section">
+                                <Typography.Title level={3} className="demo-section-title">
+                                    Список ячеек
+                                </Typography.Title>
+                                <CellList>
+                                    <CellSimple
+                                        title="Простая ячейка"
+                                        subtitle="С дополнительным текстом"
+                                    />
+                                    <CellAction
+                                        title="Действие"
+                                        subtitle="Нажмите для действия"
+                                        onClick={() => alert('Нажато!')}
+                                    />
+                                    <CellHeader title="Заголовок группы" />
+                                    <CellSimple
+                                        title="Ещё одна ячейка"
+                                        subtitle="С иконкой"
+                                        icon={<SearchIcon />}
+                                    />
+                                </CellList>
+                            </div>
+
+                            {/* Типографика */}
+                            <div className="demo-section">
+                                <Typography.Title level={3} className="demo-section-title">
+                                    Типографика
+                                </Typography.Title>
+                                <div className="demo-col">
+                                    <Typography.Display>Display</Typography.Display>
+                                    <Typography.Title level={1}>Title 1</Typography.Title>
+                                    <Typography.Title level={2}>Title 2</Typography.Title>
+                                    <Typography.Title level={3}>Title 3</Typography.Title>
+                                    <Typography.Body>Body — обычный текст</Typography.Body>
+                                    <Typography.Caption>Caption — мелкий текст</Typography.Caption>
+                                </div>
+                            </div>
+
+                            {/* Сетка и Flex */}
+                            <div className="demo-section">
+                                <Typography.Title level={3} className="demo-section-title">
+                                    Сетка и Flex
+                                </Typography.Title>
+                                <Grid cols={3} gap={8}>
+                                    <Panel mode="secondary" style={{ padding: '12px', textAlign: 'center' }}>
+                                        <Typography.Body>1</Typography.Body>
+                                    </Panel>
+                                    <Panel mode="secondary" style={{ padding: '12px', textAlign: 'center' }}>
+                                        <Typography.Body>2</Typography.Body>
+                                    </Panel>
+                                    <Panel mode="secondary" style={{ padding: '12px', textAlign: 'center' }}>
+                                        <Typography.Body>3</Typography.Body>
+                                    </Panel>
+                                </Grid>
+                                <Flex gap={8} style={{ marginTop: '12px' }}>
+                                    <Panel mode="secondary" style={{ padding: '12px', flex: 1, textAlign: 'center' }}>
+                                        <Typography.Body>Flex 1</Typography.Body>
+                                    </Panel>
+                                    <Panel mode="secondary" style={{ padding: '12px', flex: 1, textAlign: 'center' }}>
+                                        <Typography.Body>Flex 2</Typography.Body>
+                                    </Panel>
+                                </Flex>
+                            </div>
+
+                            {/* Панели */}
+                            <div className="demo-section">
+                                <Typography.Title level={3} className="demo-section-title">
+                                    Панели
+                                </Typography.Title>
+                                <div className="demo-col">
+                                    <Panel style={{ padding: '16px' }}>
+                                        <Typography.Body>Panel (по умолчанию)</Typography.Body>
+                                    </Panel>
+                                    <Panel mode="secondary" style={{ padding: '16px' }}>
+                                        <Typography.Body>Panel mode="secondary"</Typography.Body>
+                                    </Panel>
+                                    <Panel mode="tertiary" style={{ padding: '16px' }}>
+                                        <Typography.Body>Panel mode="tertiary"</Typography.Body>
+                                    </Panel>
+                                </div>
+                            </div>
+
+                        </div>
+                    </Panel>
+                </MaxUI>
+            );
+        };
+
+        // Рендер приложения
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
