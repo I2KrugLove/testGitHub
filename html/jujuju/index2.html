@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>MAX UI Демо (статика)</title>
+
+    <!-- Подключаем React 18 -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+
+    <!-- Babel для JSX в браузере -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        /* ============================================================
+           Дизайн-токены, имитирующие стиль MAX (светлая тема)
+           ============================================================ */
+        :root {
+            --max-bg: #f5f5f7;
+            --max-surface: #ffffff;
+            --max-surface-secondary: #f0f0f3;
+            --max-surface-tertiary: #e8e8ec;
+            --max-text: #000000;
+            --max-text-secondary: #6b6b70;
+            --max-text-tertiary: #9a9aa0;
+            --max-border: rgba(0, 0, 0, 0.08);
+            --max-primary: #007aff;
+            --max-primary-hover: #0066d6;
+            --max-destructive: #ff3b30;
+            --max-radius-sm: 8px;
+            --max-radius-md: 12px;
+            --max-radius-lg: 16px;
+            --max-radius-xl: 20px;
+            --max-font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            background: var(--max-bg);
+            font-family: var(--max-font);
+            color: var(--max-text);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .app {
+            max-width: 480px;
+            margin: 0 auto;
+            padding: 20px 16px 100px;
+        }
+
+        .demo-section {
+            margin-bottom: 28px;
+        }
+
+        .section-title {
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--max-text-tertiary);
+            margin: 0 0 12px 4px;
+        }
+
+        .row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .col {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        /* ============================================================
+           Нижняя фиксированная панель
+           ============================================================ */
+        .bottom-bar {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            padding: 12px 16px;
+            background: rgba(245, 245, 247, 0.85);
+            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            border-top: 1px solid var(--max-border);
+            z-index: 100;
+        }
+        .bottom-bar__inner {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+            max-width: 480px;
+        }
+        .bottom-bar .btn { flex: 1; }
+
+        /* ============================================================
+           Типографика
+           ============================================================ */
+        .t-display { font-size: 28px; font-weight: 700; line-height: 1.2; margin: 0; }
+        .t-title-1 { font-size: 22px; font-weight: 700; line-height: 1.25; margin: 0; }
+        .t-title-2 { font-size: 18px; font-weight: 600; line-height: 1.3; margin: 0; }
+        .t-title-3 { font-size: 16px; font-weight: 600; line-height: 1.35; margin: 0; }
+        .t-body    { font-size: 15px; font-weight: 400; line-height: 1.4; margin: 0; }
+        .t-caption { font-size: 13px; font-weight: 400; line-height: 1.3; color: var(--max-text-secondary); margin: 0; }
+
+        /* ============================================================
+           Panel
+           ============================================================ */
+        .panel {
+            background: var(--max-surface);
+            border-radius: var(--max-radius-lg);
+            padding: 16px;
+        }
+        .panel--secondary { background: var(--max-surface-secondary); }
+        .panel--tertiary  { background: var(--max-surface-tertiary); }
+
+        /* ============================================================
+           Button
+           ============================================================ */
+        .btn {
+            appearance: none;
+            border: none;
+            font-family: inherit;
+            font-size: 15px;
+            font-weight: 600;
+            line-height: 1;
+            padding: 12px 18px;
+            border-radius: var(--max-radius-md);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: background 0.15s, opacity 0.15s, transform 0.05s;
+            user-select: none;
+        }
+        .btn:active:not(:disabled) { transform: scale(0.97); }
+        .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+        .btn--primary   { background: var(--max-primary); color: #fff; }
+        .btn--primary:hover:not(:disabled) { background: var(--max-primary-hover); }
+
+        .btn--secondary { background: var(--max-surface-secondary); color: var(--max-text); }
+        .btn--secondary:hover:not(:disabled) { background: var(--max-surface-tertiary); }
+
+        .btn--ghost     { background: transparent; color: var(--max-primary); }
+        .btn--ghost:hover:not(:disabled) { background: rgba(0, 122, 255, 0.08); }
+
+        .btn--destructive { background: var(--max-destructive); color: #fff; }
+
+        /* ============================================================
+           IconButton
+           ============================================================ */
+        .icon-btn {
+            appearance: none;
+            border: none;
+            background: var(--max-surface-secondary);
+            color: var(--max-text);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background 0.15s, opacity 0.15s, transform 0.05s;
+        }
+        .icon-btn:active:not(:disabled) { transform: scale(0.94); }
+        .icon-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+        .icon-btn:hover:not(:disabled) { background: var(--max-surface-tertiary); }
+
+        .icon-btn--ghost       { background: transparent; color: var(--max-primary); }
+        .icon-btn--ghost:hover { background: rgba(0, 122, 255, 0.08); }
+
+        .icon-btn--destructive       { background: rgba(255, 59, 48, 0.1); color: var(--max-destructive); }
+        .icon-btn--destructive:hover { background: rgba(255, 59, 48, 0.18); }
+
+        /* ============================================================
+           ToolButton
+           ============================================================ */
+        .tool-btn {
+            appearance: none;
+            border: none;
+            background: var(--max-surface-secondary);
+            color: var(--max-text);
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 500;
+            padding: 10px 14px;
+            border-radius: var(--max-radius-md);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: background 0.15s, opacity 0.15s;
+        }
+        .tool-btn:hover:not(:disabled) { background: var(--max-surface-tertiary); }
+        .tool-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+        .tool-btn--secondary { background: transparent; border: 1px solid var(--max-border); }
+
+        /* ============================================================
+           Input / Textarea
+           ============================================================ */
+        .input, .textarea {
+            font-family: inherit;
+            font-size: 15px;
+            color: var(--max-text);
+            background: var(--max-surface-secondary);
+            border: 1px solid transparent;
+            border-radius: var(--max-radius-md);
+            padding: 12px 14px;
+            width: 100%;
+            outline: none;
+            transition: border-color 0.15s, background 0.15s;
+        }
+        .input::placeholder, .textarea::placeholder { color: var(--max-text-tertiary); }
+        .input:focus, .textarea:focus {
+            background: var(--max-surface);
+            border-color: var(--max-primary);
+        }
+        .textarea { resize: vertical; min-height: 80px; }
+
+        /* ============================================================
+           Switch
+           ============================================================ */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 51px;
+            height: 31px;
+            flex-shrink: 0;
+        }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .switch__slider {
+            position: absolute;
+            inset: 0;
+            background: var(--max-surface-tertiary);
+            border-radius: 999px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .switch__slider::before {
+            content: '';
+            position: absolute;
+            width: 27px;
+            height: 27px;
+            left: 2px;
+            top: 2px;
+            background: #fff;
+            border-radius: 50%;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+            transition: transform 0.2s;
+        }
+        .switch input:checked + .switch__slider { background: var(--max-primary); }
+        .switch input:checked + .switch__slider::before { transform: translateX(20px); }
+
+        /* ============================================================
+           Avatar
+           ============================================================ */
+        .avatar {
+            position: relative;
+            display: inline-block;
+            background: var(--max-surface-tertiary);
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        .avatar--circle   { border-radius: 50%; }
+        .avatar--squircle { border-radius: 30%; }
+        .avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+        .avatar__close {
+            position: absolute;
+            top: -2px;
+            right: -2px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--max-destructive);
+            color: #fff;
+            border: 2px solid #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            line-height: 1;
+            cursor: pointer;
+            padding: 0;
+        }
+
+        /* ============================================================
+           Spinner
+           ============================================================ */
+        .spinner {
+            display: inline-block;
+            border: 2px solid var(--max-surface-tertiary);
+            border-top-color: var(--max-primary);
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+        .spinner--sm { width: 16px; height: 16px; border-width: 2px; }
+        .spinner--md { width: 24px; height: 24px; border-width: 3px; }
+        .spinner--lg { width: 36px; height: 36px; border-width: 3px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ============================================================
+           Counter
+           ============================================================ */
+        .counter {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 22px;
+            height: 22px;
+            padding: 0 6px;
+            background: var(--max-destructive);
+            color: #fff;
+            font-size: 13px;
+            font-weight: 600;
+            border-radius: 999px;
+            font-variant-numeric: tabular-nums;
+        }
+        .counter--muted { background: var(--max-surface-tertiary); color: var(--max-text-secondary); }
+
+        /* ============================================================
+           CellList
+           ============================================================ */
+        .cell-list {
+            background: var(--max-surface);
+            border-radius: var(--max-radius-lg);
+            overflow: hidden;
+        }
+        .cell {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--max-border);
+            font-size: 15px;
+            color: var(--max-text);
+            text-decoration: none;
+            background: transparent;
+            border-left: none;
+            border-right: none;
+            border-top: none;
+            width: 100%;
+            text-align: left;
+            font-family: inherit;
+        }
+        .cell:last-child { border-bottom: none; }
+        .cell--action { cursor: pointer; transition: background 0.15s; }
+        .cell--action:hover { background: var(--max-surface-secondary); }
+        .cell__icon { flex-shrink: 0; color: var(--max-text-secondary); display: flex; }
+        .cell__body { flex: 1; min-width: 0; }
+        .cell__title { font-size: 15px; font-weight: 500; }
+        .cell__subtitle { font-size: 13px; color: var(--max-text-secondary); margin-top: 2px; }
+        .cell__chevron { color: var(--max-text-tertiary); flex-shrink: 0; }
+        .cell-header {
+            padding: 16px 16px 8px;
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            color: var(--max-text-tertiary);
+        }
+
+        /* ============================================================
+           Grid / Flex
+           ============================================================ */
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+        .flex-row { display: flex; gap: 8px; }
+        .flex-1 { flex: 1; }
+        .center { text-align: center; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState } = React;
+
+        // ============================================================
+        // SVG-иконки
+        // ============================================================
+        const SearchIcon = () => (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8" />
+                <path d="m21 21-4.35-4.35" />
+            </svg>
+        );
+
+        const MoreIcon = () => (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                <circle cx="12" cy="12" r="2" />
+                <circle cx="19" cy="12" r="2" />
+                <circle cx="5" cy="12" r="2" />
+            </svg>
+        );
+
+        const EditIcon = () => (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+            </svg>
+        );
+
+        const CloseIcon = () => (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
+                <path d="M18 6 6 18" />
+                <path d="m6 6 12 12" />
+            </svg>
+        );
+
+        const HomeIcon = () => (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                <polyline points="9 22 9 12 15 12 15 22" />
+            </svg>
+        );
+
+        const ChevronIcon = () => (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="9 18 15 12 9 6" />
+            </svg>
+        );
+
+        const ArrowUpIcon = () => (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 19V5" />
+                <path d="m5 12 7-7 7 7" />
+            </svg>
+        );
+
+        // ============================================================
+        // Компоненты
+        // ============================================================
+        const Section = ({ title, children }) => (
+            <div className="demo-section">
+                <h3 className="section-title">{title}</h3>
+                {children}
+            </div>
+        );
+
+        const Button = ({ variant = 'primary', loading, children, ...props }) => (
+            <button className={`btn btn--${variant}`} disabled={loading || props.disabled} {...props}>
+                {loading && <span className="spinner spinner--sm" style={{ borderTopColor: '#fff' }} />}
+                {children}
+            </button>
+        );
+
+        const IconButton = ({ variant = 'default', children, ...props }) => (
+            <button className={`icon-btn ${variant !== 'default' ? `icon-btn--${variant}` : ''}`} {...props}>
+                {children}
+            </button>
+        );
+
+        const ToolButton = ({ variant = 'default', icon, children, ...props }) => (
+            <button className={`tool-btn ${variant !== 'default' ? `tool-btn--${variant}` : ''}`} {...props}>
+                {icon}
+                {children}
+            </button>
+        );
+
+        const Switch = ({ checked, onChange }) => (
+            <label className="switch">
+                <input type="checkbox" checked={checked} onChange={onChange} />
+                <span className="switch__slider" />
+            </label>
+        );
+
+        const Avatar = ({ src, size = 48, form = 'circle', onClose }) => (
+            <div
+                className={`avatar avatar--${form}`}
+                style={{ width: size, height: size }}
+            >
+                <img src={src} alt="" />
+                {onClose && (
+                    <button className="avatar__close" onClick={onClose}>
+                        <CloseIcon />
+                    </button>
+                )}
+            </div>
+        );
+
+        const Spinner = ({ size = 'md' }) => (
+            <span className={`spinner spinner--${size}`} />
+        );
+
+        const Counter = ({ value, muted }) => {
+            const display = value > 999999 ? `${Math.floor(value / 1000000)}M` :
+                            value > 999 ? `${Math.floor(value / 1000)}K` : value;
+            return <span className={`counter ${muted ? 'counter--muted' : ''}`}>{display}</span>;
+        };
+
+        const Cell = ({ title, subtitle, icon, onClick, chevron }) => {
+            const Tag = onClick ? 'button' : 'div';
+            return (
+                <Tag className={`cell ${onClick ? 'cell--action' : ''}`} onClick={onClick}>
+                    {icon && <span className="cell__icon">{icon}</span>}
+                    <div className="cell__body">
+                        <div className="cell__title">{title}</div>
+                        {subtitle && <div className="cell__subtitle">{subtitle}</div>}
+                    </div>
+                    {chevron && <span className="cell__chevron"><ChevronIcon /></span>}
+                </Tag>
+            );
+        };
+
+        // ============================================================
+        // Нижняя фиксированная панель
+        // ============================================================
+        const BottomBar = () => (
+            <div className="bottom-bar">
+                <div className="bottom-bar__inner">
+                    <Button
+                        variant="secondary"
+                        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                    >
+                        <ArrowUpIcon />
+                        В начало
+                    </Button>
+                    <Button
+                        variant="primary"
+                        onClick={() => {
+                            // В реальном Mini App здесь был бы вызов MAX Bridge
+                            // Для статики — просто alert
+                            alert('Закрыть');
+                        }}
+                    >
+                        Закрыть
+                    </Button>
+                </div>
+            </div>
+        );
+
+        // ============================================================
+        // Приложение
+        // ============================================================
+        const App = () => {
+            const [inputValue, setInputValue] = useState('');
+            const [textareaValue, setTextareaValue] = useState('');
+            const [switchOn, setSwitchOn] = useState(false);
+
+            return (
+                <React.Fragment>
+                    <div className="app">
+                        <h1 className="t-display" style={{ marginBottom: 4 }}>MAX UI Демо</h1>
+                        <p className="t-caption" style={{ marginBottom: 28 }}>
+                            Статическая демонстрация компонентов без библиотеки
+                        </p>
+
+                        {/* Кнопки */}
+                        <Section title="Кнопки">
+                            <div className="row">
+                                <Button>Primary</Button>
+                                <Button variant="secondary">Secondary</Button>
+                                <Button variant="ghost">Ghost</Button>
+                                <Button loading>Loading</Button>
+                                <Button disabled>Disabled</Button>
+                                <Button variant="destructive">Удалить</Button>
+                            </div>
+                        </Section>
+
+                        {/* Иконочные кнопки */}
+                        <Section title="Иконочные кнопки">
+                            <div className="row">
+                                <IconButton><SearchIcon /></IconButton>
+                                <IconButton variant="ghost"><MoreIcon /></IconButton>
+                                <IconButton variant="destructive"><CloseIcon /></IconButton>
+                                <IconButton disabled><EditIcon /></IconButton>
+                            </div>
+                        </Section>
+
+                        {/* ToolButton */}
+                        <Section title="ToolButton">
+                            <div className="row">
+                                <ToolButton icon={<SearchIcon />} />
+                                <ToolButton icon={<EditIcon />}>Редактировать</ToolButton>
+                                <ToolButton icon={<MoreIcon />} variant="secondary">Ещё</ToolButton>
+                                <ToolButton icon={<HomeIcon />} disabled>Домой</ToolButton>
+                            </div>
+                        </Section>
+
+                        {/* Поля ввода */}
+                        <Section title="Поля ввода">
+                            <div className="col">
+                                <input
+                                    className="input"
+                                    placeholder="Введите текст..."
+                                    value={inputValue}
+                                    onChange={(e) => setInputValue(e.target.value)}
+                                />
+                                <textarea
+                                    className="textarea"
+                                    placeholder="Введите многострочный текст..."
+                                    value={textareaValue}
+                                    onChange={(e) => setTextareaValue(e.target.value)}
+                                    rows={3}
+                                />
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                    <Switch checked={switchOn} onChange={(e) => setSwitchOn(e.target.checked)} />
+                                    <span className="t-body">
+                                        Переключатель {switchOn ? 'включён' : 'выключен'}
+                                    </span>
+                                </div>
+                            </div>
+                        </Section>
+
+                        {/* Аватары */}
+                        <Section title="Аватары">
+                            <div className="row">
+                                <Avatar src="https://i.pravatar.cc/150?img=1" size={48} form="circle" />
+                                <Avatar src="https://i.pravatar.cc/150?img=2" size={48} form="squircle" />
+                                <Avatar src="https://i.pravatar.cc/150?img=3" size={64} form="circle" />
+                                <Avatar
+                                    src="https://i.pravatar.cc/150?img=4"
+                                    size={64}
+                                    form="squircle"
+                                    onClose={() => alert('Закрыть')}
+                                />
+                            </div>
+                        </Section>
+
+                        {/* Спиннеры и счётчики */}
+                        <Section title="Спиннеры и счётчики">
+                            <div className="row">
+                                <Spinner size="sm" />
+                                <Spinner size="md" />
+                                <Spinner size="lg" />
+                                <Counter value={5} />
+                                <Counter value={1200} />
+                                <Counter value={5600000} />
+                                <Counter value={3} muted />
+                            </div>
+                        </Section>
+
+                        {/* Список ячеек */}
+                        <Section title="Список ячеек">
+                            <div className="cell-list">
+                                <Cell title="Простая ячейка" subtitle="С дополнительным текстом" />
+                                <Cell
+                                    title="Действие"
+                                    subtitle="Нажмите для действия"
+                                    onClick={() => alert('Нажато!')}
+                                    chevron
+                                />
+                                <div className="cell-header">Заголовок группы</div>
+                                <Cell
+                                    title="Ещё одна ячейка"
+                                    subtitle="С иконкой"
+                                    icon={<SearchIcon />}
+                                    chevron
+                                />
+                            </div>
+                        </Section>
+
+                        {/* Типографика */}
+                        <Section title="Типографика">
+                            <div className="col">
+                                <p className="t-display">Display</p>
+                                <p className="t-title-1">Title 1</p>
+                                <p className="t-title-2">Title 2</p>
+                                <p className="t-title-3">Title 3</p>
+                                <p className="t-body">Body — обычный текст</p>
+                                <p className="t-caption">Caption — мелкий текст</p>
+                            </div>
+                        </Section>
+
+                        {/* Сетка и Flex */}
+                        <Section title="Сетка и Flex">
+                            <div className="grid-3">
+                                <div className="panel panel--secondary center"><span className="t-body">1</span></div>
+                                <div className="panel panel--secondary center"><span className="t-body">2</span></div>
+                                <div className="panel panel--secondary center"><span className="t-body">3</span></div>
+                            </div>
+                            <div className="flex-row" style={{ marginTop: 8 }}>
+                                <div className="panel panel--secondary center flex-1"><span className="t-body">Flex 1</span></div>
+                                <div className="panel panel--secondary center flex-1"><span className="t-body">Flex 2</span></div>
+                            </div>
+                        </Section>
+
+                        {/* Панели */}
+                        <Section title="Панели">
+                            <div className="col">
+                                <div className="panel"><span className="t-body">Panel (по умолчанию)</span></div>
+                                <div className="panel panel--secondary"><span className="t-body">Panel secondary</span></div>
+                                <div className="panel panel--tertiary"><span className="t-body">Panel tertiary</span></div>
+                            </div>
+                        </Section>
+                    </div>
+
+                    <BottomBar />
+                </React.Fragment>
+            );
+        };
+
+        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    </script>
+</body>
+</html>
