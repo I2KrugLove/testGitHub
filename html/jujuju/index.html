@@ -33,6 +33,9 @@
             --max-radius-lg: 16px;
             --max-radius-xl: 20px;
             --max-font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+
+            --top-bar-h: 56px;
+            --bottom-bar-h: 64px;
         }
 
         * { box-sizing: border-box; }
@@ -48,7 +51,7 @@
         .app {
             max-width: 480px;
             margin: 0 auto;
-            padding: 20px 16px 60px;
+            padding: calc(var(--top-bar-h) + 20px) 16px calc(var(--bottom-bar-h) + 40px);
         }
 
         .demo-section {
@@ -76,6 +79,160 @@
             flex-direction: column;
             gap: 12px;
         }
+
+        /* ============================================================
+           Верхнее фиксированное меню
+           ============================================================ */
+        .top-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: var(--top-bar-h);
+            background: rgba(245, 245, 247, 0.85);
+            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            border-bottom: 1px solid var(--max-border);
+            z-index: 100;
+        }
+        .top-bar__inner {
+            max-width: 480px;
+            height: 100%;
+            margin: 0 auto;
+            padding: 0 12px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .top-bar__brand {
+            font-size: 15px;
+            font-weight: 700;
+            margin-right: 8px;
+            white-space: nowrap;
+        }
+        .top-bar__spacer { flex: 1; }
+
+        .menu-item {
+            position: relative;
+        }
+        .menu-item__btn {
+            appearance: none;
+            border: none;
+            background: transparent;
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--max-text);
+            padding: 8px 10px;
+            border-radius: var(--max-radius-md);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+            transition: background 0.15s;
+        }
+        .menu-item__btn:hover { background: var(--max-surface-secondary); }
+        .menu-item__btn--active { background: var(--max-surface-secondary); }
+        .menu-item__btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+        .menu-item__caret {
+            display: inline-block;
+            width: 0;
+            height: 0;
+            border-left: 4px solid transparent;
+            border-right: 4px solid transparent;
+            border-top: 5px solid currentColor;
+            transition: transform 0.15s;
+        }
+        .menu-item__btn--active .menu-item__caret {
+            transform: rotate(180deg);
+        }
+
+        .dropdown {
+            position: absolute;
+            top: calc(100% + 6px);
+            left: 0;
+            min-width: 200px;
+            background: var(--max-surface);
+            border: 1px solid var(--max-border);
+            border-radius: var(--max-radius-lg);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+            padding: 6px;
+            z-index: 200;
+            animation: dropdown-in 0.12s ease-out;
+        }
+        .dropdown--right { left: auto; right: 0; }
+
+        @keyframes dropdown-in {
+            from { opacity: 0; transform: translateY(-4px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .dropdown__item {
+            appearance: none;
+            border: none;
+            background: transparent;
+            font-family: inherit;
+            font-size: 14px;
+            color: var(--max-text);
+            width: 100%;
+            text-align: left;
+            padding: 10px 12px;
+            border-radius: var(--max-radius-sm);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: background 0.12s;
+        }
+        .dropdown__item:hover { background: var(--max-surface-secondary); }
+        .dropdown__item--active { color: var(--max-primary); font-weight: 600; }
+        .dropdown__item--danger { color: var(--max-destructive); }
+        .dropdown__separator {
+            height: 1px;
+            background: var(--max-border);
+            margin: 6px 8px;
+        }
+
+        /* Затемнение фона при открытом меню */
+        .backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.05);
+            z-index: 90;
+            animation: backdrop-in 0.12s ease-out;
+        }
+        @keyframes backdrop-in {
+            from { opacity: 0; }
+            to   { opacity: 1; }
+        }
+
+        /* ============================================================
+           Нижняя фиксированная панель
+           ============================================================ */
+        .bottom-bar {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            padding: 12px 16px;
+            background: rgba(245, 245, 247, 0.85);
+            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(20px);
+            border-top: 1px solid var(--max-border);
+            z-index: 100;
+        }
+        .bottom-bar__inner {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+            max-width: 480px;
+        }
+        .bottom-bar .btn { flex: 1; }
 
         /* ============================================================
            Типографика
@@ -117,6 +274,7 @@
             gap: 8px;
             transition: background 0.15s, opacity 0.15s, transform 0.05s;
             user-select: none;
+            text-decoration: none;
         }
         .btn:active:not(:disabled) { transform: scale(0.97); }
         .btn:disabled { opacity: 0.45; cursor: not-allowed; }
@@ -158,6 +316,11 @@
 
         .icon-btn--destructive       { background: rgba(255, 59, 48, 0.1); color: var(--max-destructive); }
         .icon-btn--destructive:hover { background: rgba(255, 59, 48, 0.18); }
+
+        .icon-btn--sm {
+            width: 32px;
+            height: 32px;
+        }
 
         /* ============================================================
            ToolButton
@@ -358,13 +521,44 @@
         .flex-row { display: flex; gap: 8px; }
         .flex-1 { flex: 1; }
         .center { text-align: center; }
+
+        /* ============================================================
+           Map
+           ============================================================ */
+        .map-frame {
+            position: relative;
+            width: 100%;
+            padding-top: 60%;
+            border-radius: var(--max-radius-lg);
+            overflow: hidden;
+            background: var(--max-surface-secondary);
+        }
+        .map-frame iframe {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            border: 0;
+        }
+        .map-fallback {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 16px;
+            color: var(--max-text-secondary);
+            font-size: 14px;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState } = React;
+        const { useState, useRef, useEffect } = React;
 
         // ============================================================
         // SVG-иконки
@@ -410,6 +604,51 @@
             </svg>
         );
 
+        const ArrowUpIcon = () => (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 19V5" />
+                <path d="m5 12 7-7 7 7" />
+            </svg>
+        );
+
+        const BellIcon = () => (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+                <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+            </svg>
+        );
+
+        const UserIcon = () => (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="8" r="4" />
+                <path d="M4 21a8 8 0 0 1 16 0" />
+            </svg>
+        );
+
+        const GridIcon = () => (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="7" height="7" rx="1" />
+                <rect x="14" y="3" width="7" height="7" rx="1" />
+                <rect x="3" y="14" width="7" height="7" rx="1" />
+                <rect x="14" y="14" width="7" height="7" rx="1" />
+            </svg>
+        );
+
+        const LogoutIcon = () => (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+        );
+
+        const MapPinIcon = () => (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
+                <circle cx="12" cy="10" r="3" />
+            </svg>
+        );
+
         // ============================================================
         // Компоненты
         // ============================================================
@@ -427,8 +666,8 @@
             </button>
         );
 
-        const IconButton = ({ variant = 'default', children, ...props }) => (
-            <button className={`icon-btn ${variant !== 'default' ? `icon-btn--${variant}` : ''}`} {...props}>
+        const IconButton = ({ variant = 'default', size = 'md', children, ...props }) => (
+            <button className={`icon-btn ${variant !== 'default' ? `icon-btn--${variant}` : ''} ${size === 'sm' ? 'icon-btn--sm' : ''}`} {...props}>
                 {children}
             </button>
         );
@@ -486,6 +725,217 @@
         };
 
         // ============================================================
+        // Карта
+        // ============================================================
+        const MapSection = () => {
+            const routeUrl = 'https://yandex.ru/maps/?rtext=44.6486,37.9319~44.4722,38.3972&rtt=auto';
+            // Прямая ссылка /maps/?rtext=... НЕ встраивается в iframe.
+            // Ниже — пример встраиваемой ссылки из Конструктора карт.
+            // Замените embedUrl на свою ссылку, полученную на
+            // https://yandex.ru/map-constructor/ (кнопка «Получить код карты» → iframe).
+            const embedUrl = 'https://yandex.ru/map-widget/v1/?um=constructor%3A0000000000000000000000000000000000000000000000000000000000000000&source=constructor';
+
+            const [embedFailed, setEmbedFailed] = useState(false);
+
+            return (
+                <Section title="Карта">
+                    <div className="col">
+                        <a
+                            className="btn btn--primary"
+                            href={routeUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            <MapPinIcon />
+                            Открыть маршрут в Яндекс.Картах
+                        </a>
+
+                        <div className="map-frame">
+                            {!embedFailed ? (
+                                <iframe
+                                    src={embedUrl}
+                                    title="Карта маршрута"
+                                    loading="lazy"
+                                    referrerPolicy="no-referrer-when-downgrade"
+                                    allowFullScreen
+                                    onError={() => setEmbedFailed(true)}
+                                />
+                            ) : (
+                                <div className="map-fallback">
+                                    Карта недоступна. Откройте маршрут по ссылке выше.
+                                </div>
+                            )}
+                        </div>
+
+                        <p className="t-caption">
+                            Если карта не отображается — откройте маршрут по кнопке выше.
+                        </p>
+                    </div>
+                </Section>
+            );
+        };
+
+        // ============================================================
+        // Верхнее меню
+        // ============================================================
+        const MenuItem = ({ id, label, items, openMenu, setOpenMenu, align = 'left', disabled }) => {
+            const ref = useRef(null);
+            const isOpen = openMenu === id;
+
+            useEffect(() => {
+                if (!isOpen) return;
+                const onDocClick = (e) => {
+                    if (ref.current && !ref.current.contains(e.target)) {
+                        setOpenMenu(null);
+                    }
+                };
+                document.addEventListener('mousedown', onDocClick);
+                return () => document.removeEventListener('mousedown', onDocClick);
+            }, [isOpen, setOpenMenu]);
+
+            return (
+                <div className="menu-item" ref={ref}>
+                    <button
+                        className={`menu-item__btn ${isOpen ? 'menu-item__btn--active' : ''}`}
+                        onClick={() => !disabled && setOpenMenu(isOpen ? null : id)}
+                        disabled={disabled}
+                    >
+                        {label}
+                        <span className="menu-item__caret" />
+                    </button>
+                    {isOpen && (
+                        <div className={`dropdown ${align === 'right' ? 'dropdown--right' : ''}`}>
+                            {items.map((item, i) =>
+                                item.type === 'separator' ? (
+                                    <div key={i} className="dropdown__separator" />
+                                ) : (
+                                    <button
+                                        key={i}
+                                        className={`dropdown__item ${item.active ? 'dropdown__item--active' : ''} ${item.danger ? 'dropdown__item--danger' : ''}`}
+                                        onClick={() => {
+                                            setOpenMenu(null);
+                                            if (item.onClick) item.onClick();
+                                        }}
+                                    >
+                                        {item.icon && <span style={{ display: 'flex' }}>{item.icon}</span>}
+                                        {item.label}
+                                    </button>
+                                )
+                            )}
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const TopBar = () => {
+            const [openMenu, setOpenMenu] = useState(null);
+            const [activeSection, setActiveSection] = useState('Кнопки');
+
+            const sections = [
+                { label: 'Кнопки', target: 'Кнопки' },
+                { label: 'Иконочные кнопки', target: 'Иконочные кнопки' },
+                { label: 'ToolButton', target: 'ToolButton' },
+                { label: 'Поля ввода', target: 'Поля ввода' },
+                { label: 'Аватары', target: 'Аватары' },
+                { label: 'Спиннеры и счётчики', target: 'Спиннеры и счётчики' },
+                { label: 'Карта', target: 'Карта' },
+                { label: 'Список ячеек', target: 'Список ячеек' },
+                { label: 'Типографика', target: 'Типографика' },
+                { label: 'Сетка и Flex', target: 'Сетка и Flex' },
+                { label: 'Панели', target: 'Панели' }
+            ];
+
+            const scrollToSection = (title) => {
+                const headers = document.querySelectorAll('.section-title');
+                for (const h of headers) {
+                    if (h.textContent.trim() === title) {
+                        const top = h.getBoundingClientRect().top + window.scrollY - 72;
+                        window.scrollTo({ top, behavior: 'smooth' });
+                        setActiveSection(title);
+                        return;
+                    }
+                }
+            };
+
+            return (
+                <React.Fragment>
+                    {openMenu && <div className="backdrop" onClick={() => setOpenMenu(null)} />}
+                    <div className="top-bar">
+                        <div className="top-bar__inner">
+                            <span className="top-bar__brand">MAX UI</span>
+
+                            <MenuItem
+                                id="sections"
+                                label={activeSection}
+                                openMenu={openMenu}
+                                setOpenMenu={setOpenMenu}
+                                items={sections.map(s => ({
+                                    label: s.label,
+                                    active: activeSection === s.target,
+                                    icon: <GridIcon />,
+                                    onClick: () => scrollToSection(s.target)
+                                }))}
+                            />
+
+                            <MenuItem
+                                id="actions"
+                                label="Действия"
+                                openMenu={openMenu}
+                                setOpenMenu={setOpenMenu}
+                                items={[
+                                    { label: 'Редактировать', icon: <EditIcon />, onClick: () => alert('Редактировать') },
+                                    { label: 'Обновить', icon: <BellIcon />, onClick: () => alert('Обновить') },
+                                    { type: 'separator' },
+                                    { label: 'Выйти', icon: <LogoutIcon />, danger: true, onClick: () => alert('Выйти') }
+                                ]}
+                            />
+
+                            <div className="top-bar__spacer" />
+
+                            <MenuItem
+                                id="user"
+                                label={<UserIcon />}
+                                openMenu={openMenu}
+                                setOpenMenu={setOpenMenu}
+                                align="right"
+                                items={[
+                                    { label: 'Профиль', icon: <UserIcon />, onClick: () => alert('Профиль') },
+                                    { label: 'Уведомления', icon: <BellIcon />, onClick: () => alert('Уведомления') },
+                                    { type: 'separator' },
+                                    { label: 'Выйти', icon: <LogoutIcon />, danger: true, onClick: () => alert('Выйти') }
+                                ]}
+                            />
+                        </div>
+                    </div>
+                </React.Fragment>
+            );
+        };
+
+        // ============================================================
+        // Нижняя фиксированная панель
+        // ============================================================
+        const BottomBar = () => (
+            <div className="bottom-bar">
+                <div className="bottom-bar__inner">
+                    <Button
+                        variant="secondary"
+                        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                    >
+                        <ArrowUpIcon />
+                        В начало
+                    </Button>
+                    <Button
+                        variant="primary"
+                        onClick={() => alert('Закрыть')}
+                    >
+                        Закрыть
+                    </Button>
+                </div>
+            </div>
+        );
+
+        // ============================================================
         // Приложение
         // ============================================================
         const App = () => {
@@ -494,151 +944,160 @@
             const [switchOn, setSwitchOn] = useState(false);
 
             return (
-                <div className="app">
-                    <h1 className="t-display" style={{ marginBottom: 4 }}>MAX UI Демо</h1>
-                    <p className="t-caption" style={{ marginBottom: 28 }}>
-                        Статическая демонстрация компонентов без библиотеки
-                    </p>
+                <React.Fragment>
+                    <TopBar />
 
-                    {/* Кнопки */}
-                    <Section title="Кнопки">
-                        <div className="row">
-                            <Button>Primary</Button>
-                            <Button variant="secondary">Secondary</Button>
-                            <Button variant="ghost">Ghost</Button>
-                            <Button loading>Loading</Button>
-                            <Button disabled>Disabled</Button>
-                            <Button variant="destructive">Удалить</Button>
-                        </div>
-                    </Section>
+                    <div className="app">
+                        <h1 className="t-display" style={{ marginBottom: 4 }}>MAX UI Демо</h1>
+                        <p className="t-caption" style={{ marginBottom: 28 }}>
+                            Статическая демонстрация компонентов без библиотеки
+                        </p>
 
-                    {/* Иконочные кнопки */}
-                    <Section title="Иконочные кнопки">
-                        <div className="row">
-                            <IconButton><SearchIcon /></IconButton>
-                            <IconButton variant="ghost"><MoreIcon /></IconButton>
-                            <IconButton variant="destructive"><CloseIcon /></IconButton>
-                            <IconButton disabled><EditIcon /></IconButton>
-                        </div>
-                    </Section>
-
-                    {/* ToolButton */}
-                    <Section title="ToolButton">
-                        <div className="row">
-                            <ToolButton icon={<SearchIcon />} />
-                            <ToolButton icon={<EditIcon />}>Редактировать</ToolButton>
-                            <ToolButton icon={<MoreIcon />} variant="secondary">Ещё</ToolButton>
-                            <ToolButton icon={<HomeIcon />} disabled>Домой</ToolButton>
-                        </div>
-                    </Section>
-
-                    {/* Поля ввода */}
-                    <Section title="Поля ввода">
-                        <div className="col">
-                            <input
-                                className="input"
-                                placeholder="Введите текст..."
-                                value={inputValue}
-                                onChange={(e) => setInputValue(e.target.value)}
-                            />
-                            <textarea
-                                className="textarea"
-                                placeholder="Введите многострочный текст..."
-                                value={textareaValue}
-                                onChange={(e) => setTextareaValue(e.target.value)}
-                                rows={3}
-                            />
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                                <Switch checked={switchOn} onChange={(e) => setSwitchOn(e.target.checked)} />
-                                <span className="t-body">
-                                    Переключатель {switchOn ? 'включён' : 'выключен'}
-                                </span>
+                        {/* Кнопки */}
+                        <Section title="Кнопки">
+                            <div className="row">
+                                <Button>Primary</Button>
+                                <Button variant="secondary">Secondary</Button>
+                                <Button variant="ghost">Ghost</Button>
+                                <Button loading>Loading</Button>
+                                <Button disabled>Disabled</Button>
+                                <Button variant="destructive">Удалить</Button>
                             </div>
-                        </div>
-                    </Section>
+                        </Section>
 
-                    {/* Аватары */}
-                    <Section title="Аватары">
-                        <div className="row">
-                            <Avatar src="https://i.pravatar.cc/150?img=1" size={48} form="circle" />
-                            <Avatar src="https://i.pravatar.cc/150?img=2" size={48} form="squircle" />
-                            <Avatar src="https://i.pravatar.cc/150?img=3" size={64} form="circle" />
-                            <Avatar
-                                src="https://i.pravatar.cc/150?img=4"
-                                size={64}
-                                form="squircle"
-                                onClose={() => alert('Закрыть')}
-                            />
-                        </div>
-                    </Section>
+                        {/* Иконочные кнопки */}
+                        <Section title="Иконочные кнопки">
+                            <div className="row">
+                                <IconButton><SearchIcon /></IconButton>
+                                <IconButton variant="ghost"><MoreIcon /></IconButton>
+                                <IconButton variant="destructive"><CloseIcon /></IconButton>
+                                <IconButton disabled><EditIcon /></IconButton>
+                            </div>
+                        </Section>
 
-                    {/* Спиннеры и счётчики */}
-                    <Section title="Спиннеры и счётчики">
-                        <div className="row">
-                            <Spinner size="sm" />
-                            <Spinner size="md" />
-                            <Spinner size="lg" />
-                            <Counter value={5} />
-                            <Counter value={1200} />
-                            <Counter value={5600000} />
-                            <Counter value={3} muted />
-                        </div>
-                    </Section>
+                        {/* ToolButton */}
+                        <Section title="ToolButton">
+                            <div className="row">
+                                <ToolButton icon={<SearchIcon />} />
+                                <ToolButton icon={<EditIcon />}>Редактировать</ToolButton>
+                                <ToolButton icon={<MoreIcon />} variant="secondary">Ещё</ToolButton>
+                                <ToolButton icon={<HomeIcon />} disabled>Домой</ToolButton>
+                            </div>
+                        </Section>
 
-                    {/* Список ячеек */}
-                    <Section title="Список ячеек">
-                        <div className="cell-list">
-                            <Cell title="Простая ячейка" subtitle="С дополнительным текстом" />
-                            <Cell
-                                title="Действие"
-                                subtitle="Нажмите для действия"
-                                onClick={() => alert('Нажато!')}
-                                chevron
-                            />
-                            <div className="cell-header">Заголовок группы</div>
-                            <Cell
-                                title="Ещё одна ячейка"
-                                subtitle="С иконкой"
-                                icon={<SearchIcon />}
-                                chevron
-                            />
-                        </div>
-                    </Section>
+                        {/* Поля ввода */}
+                        <Section title="Поля ввода">
+                            <div className="col">
+                                <input
+                                    className="input"
+                                    placeholder="Введите текст..."
+                                    value={inputValue}
+                                    onChange={(e) => setInputValue(e.target.value)}
+                                />
+                                <textarea
+                                    className="textarea"
+                                    placeholder="Введите многострочный текст..."
+                                    value={textareaValue}
+                                    onChange={(e) => setTextareaValue(e.target.value)}
+                                    rows={3}
+                                />
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                    <Switch checked={switchOn} onChange={(e) => setSwitchOn(e.target.checked)} />
+                                    <span className="t-body">
+                                        Переключатель {switchOn ? 'включён' : 'выключен'}
+                                    </span>
+                                </div>
+                            </div>
+                        </Section>
 
-                    {/* Типографика */}
-                    <Section title="Типографика">
-                        <div className="col">
-                            <p className="t-display">Display</p>
-                            <p className="t-title-1">Title 1</p>
-                            <p className="t-title-2">Title 2</p>
-                            <p className="t-title-3">Title 3</p>
-                            <p className="t-body">Body — обычный текст</p>
-                            <p className="t-caption">Caption — мелкий текст</p>
-                        </div>
-                    </Section>
+                        {/* Аватары */}
+                        <Section title="Аватары">
+                            <div className="row">
+                                <Avatar src="https://i.pravatar.cc/150?img=1" size={48} form="circle" />
+                                <Avatar src="https://i.pravatar.cc/150?img=2" size={48} form="squircle" />
+                                <Avatar src="https://i.pravatar.cc/150?img=3" size={64} form="circle" />
+                                <Avatar
+                                    src="https://i.pravatar.cc/150?img=4"
+                                    size={64}
+                                    form="squircle"
+                                    onClose={() => alert('Закрыть')}
+                                />
+                            </div>
+                        </Section>
 
-                    {/* Сетка и Flex */}
-                    <Section title="Сетка и Flex">
-                        <div className="grid-3">
-                            <div className="panel panel--secondary center"><span className="t-body">1</span></div>
-                            <div className="panel panel--secondary center"><span className="t-body">2</span></div>
-                            <div className="panel panel--secondary center"><span className="t-body">3</span></div>
-                        </div>
-                        <div className="flex-row" style={{ marginTop: 8 }}>
-                            <div className="panel panel--secondary center flex-1"><span className="t-body">Flex 1</span></div>
-                            <div className="panel panel--secondary center flex-1"><span className="t-body">Flex 2</span></div>
-                        </div>
-                    </Section>
+                        {/* Спиннеры и счётчики */}
+                        <Section title="Спиннеры и счётчики">
+                            <div className="row">
+                                <Spinner size="sm" />
+                                <Spinner size="md" />
+                                <Spinner size="lg" />
+                                <Counter value={5} />
+                                <Counter value={1200} />
+                                <Counter value={5600000} />
+                                <Counter value={3} muted />
+                            </div>
+                        </Section>
 
-                    {/* Панели */}
-                    <Section title="Панели">
-                        <div className="col">
-                            <div className="panel"><span className="t-body">Panel (по умолчанию)</span></div>
-                            <div className="panel panel--secondary"><span className="t-body">Panel secondary</span></div>
-                            <div className="panel panel--tertiary"><span className="t-body">Panel tertiary</span></div>
-                        </div>
-                    </Section>
-                </div>
+                        {/* Карта */}
+                        <MapSection />
+
+                        {/* Список ячеек */}
+                        <Section title="Список ячеек">
+                            <div className="cell-list">
+                                <Cell title="Простая ячейка" subtitle="С дополнительным текстом" />
+                                <Cell
+                                    title="Действие"
+                                    subtitle="Нажмите для действия"
+                                    onClick={() => alert('Нажато!')}
+                                    chevron
+                                />
+                                <div className="cell-header">Заголовок группы</div>
+                                <Cell
+                                    title="Ещё одна ячейка"
+                                    subtitle="С иконкой"
+                                    icon={<SearchIcon />}
+                                    chevron
+                                />
+                            </div>
+                        </Section>
+
+                        {/* Типографика */}
+                        <Section title="Типографика">
+                            <div className="col">
+                                <p className="t-display">Display</p>
+                                <p className="t-title-1">Title 1</p>
+                                <p className="t-title-2">Title 2</p>
+                                <p className="t-title-3">Title 3</p>
+                                <p className="t-body">Body — обычный текст</p>
+                                <p className="t-caption">Caption — мелкий текст</p>
+                            </div>
+                        </Section>
+
+                        {/* Сетка и Flex */}
+                        <Section title="Сетка и Flex">
+                            <div className="grid-3">
+                                <div className="panel panel--secondary center"><span className="t-body">1</span></div>
+                                <div className="panel panel--secondary center"><span className="t-body">2</span></div>
+                                <div className="panel panel--secondary center"><span className="t-body">3</span></div>
+                            </div>
+                            <div className="flex-row" style={{ marginTop: 8 }}>
+                                <div className="panel panel--secondary center flex-1"><span className="t-body">Flex 1</span></div>
+                                <div className="panel panel--secondary center flex-1"><span className="t-body">Flex 2</span></div>
+                            </div>
+                        </Section>
+
+                        {/* Панели */}
+                        <Section title="Панели">
+                            <div className="col">
+                                <div className="panel"><span className="t-body">Panel (по умолчанию)</span></div>
+                                <div className="panel panel--secondary"><span className="t-body">Panel secondary</span></div>
+                                <div className="panel panel--tertiary"><span className="t-body">Panel tertiary</span></div>
+                            </div>
+                        </Section>
+                    </div>
+
+                    <BottomBar />
+                </React.Fragment>
             );
         };
 
