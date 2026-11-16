@@ -18,11 +18,11 @@
     --danger:#ff3b30; --ok:#34c759; --warn:#ff9500;
     --r-md:12px; --r-lg:16px;
     --font:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
-    --top:56px; --composer-h:72px;
+    --top:56px; --bottom:88px;
   }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);font-family:var(--font);color:var(--text);-webkit-font-smoothing:antialiased}
-  .app{max-width:520px;margin:0 auto;padding:calc(var(--top) + 16px) 16px calc(var(--composer-h) + 40px)}
+  .app{max-width:520px;margin:0 auto;padding:calc(var(--top) + 16px) 16px calc(var(--bottom) + 40px)}
 
   .top-bar{position:fixed;top:0;left:0;right:0;height:var(--top);background:rgba(245,245,247,.85);
     backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);
@@ -71,48 +71,39 @@
   .warn--err{background:rgba(255,59,48,.1);color:#a3231b;border-color:rgba(255,59,48,.3)}
   .warn--info{background:rgba(0,122,255,.08);color:#0055cc;border-color:rgba(0,122,255,.2)}
 
-  /* ====== Подвал (composer) ====== */
-  .composer{
-    position:fixed;left:0;right:0;bottom:0;
-    background:rgba(245,245,247,.92);
-    backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);
-    border-top:1px solid var(--border);z-index:200;
-    padding:8px 0 calc(8px + env(safe-area-inset-bottom));
+  /* ===== FAB-группа ===== */
+  .fab-group{
+    position:fixed;right:16px;bottom:20px;
+    display:flex;flex-direction:column;gap:12px;z-index:200;
   }
-  .composer__inner{
-    max-width:520px;margin:0 auto;padding:0 12px;
-    display:flex;align-items:flex-end;gap:8px;
+  .fab-btn{
+    width:56px;height:56px;border-radius:50%;border:none;cursor:pointer;
+    background:transparent;
+    color:var(--primary);
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 4px 16px rgba(0,0,0,.12);
+    transition:background .15s, transform .08s, color .15s, box-shadow .15s;
+    -webkit-tap-highlight-color:transparent;
+    backdrop-filter:blur(6px);
   }
-  .composer__ta{
-    flex:1;font-family:inherit;font-size:15px;color:var(--text);
-    background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);
-    padding:10px 14px;outline:none;resize:none;max-height:120px;min-height:44px;line-height:1.4;
-    transition:border-color .15s;
+  .fab-btn:hover{background:rgba(0,122,255,.08)}
+  /* Во время нажатия — синий фон */
+  .fab-btn:active{
+    background:var(--primary);
+    color:#fff;
+    transform:scale(.94);
+    box-shadow:0 6px 20px rgba(0,122,255,.45);
   }
-  .composer__ta:focus{border-color:var(--primary)}
-  .composer__ta::placeholder{color:var(--text3)}
-
-  .composer__btn{
-    flex:0 0 44px;width:44px;height:44px;border-radius:50%;border:none;cursor:pointer;
-    background:var(--surface2);color:var(--text);display:flex;align-items:center;justify-content:center;
-    transition:background .15s, transform .05s, color .15s, opacity .15s;
+  .fab-btn--rec{
+    background:var(--primary);color:#fff;
+    box-shadow:0 6px 20px rgba(0,122,255,.45);
+    animation:pulse 1s infinite;
   }
-  .composer__btn:hover:not(:disabled){background:var(--surface3)}
-  .composer__btn:active:not(:disabled){transform:scale(.94)}
-  .composer__btn:disabled{opacity:.4;cursor:not-allowed}
-  .composer__btn--rec{background:var(--danger);color:#fff;animation:pulse 1s infinite}
-  .composer__btn--send{background:var(--primary);color:#fff}
-  .composer__btn--send:hover:not(:disabled){background:var(--primaryH)}
+  .fab-btn:disabled{opacity:.4;cursor:not-allowed;box-shadow:none}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.65}}
 
-  .attach-preview{
-    max-width:520px;margin:0 auto 6px;padding:0 12px;font-size:13px;color:var(--text2);
-    display:flex;align-items:center;gap:6px;
-  }
-  .attach-preview button{background:none;border:none;color:var(--danger);cursor:pointer;font-size:13px;padding:0}
-
   .toast{
-    position:fixed;left:50%;bottom:calc(var(--composer-h) + 20px);transform:translateX(-50%);
+    position:fixed;left:50%;bottom:100px;transform:translateX(-50%);
     background:rgba(0,0,0,.85);color:#fff;padding:10px 16px;border-radius:999px;font-size:14px;
     z-index:300;max-width:90vw;text-align:center;
   }
@@ -126,25 +117,25 @@
 const { useState, useEffect, useRef } = React;
 
 // ============ ИКОНКИ ============
-const MicIcon = ({size=20}) => (
+const MicIcon = ({size=22}) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <rect x="9" y="2" width="6" height="12" rx="3"/>
     <path d="M5 10v1a7 7 0 0 0 14 0v-1"/>
     <line x1="12" y1="19" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/>
   </svg>
 );
-const StopIcon = ({size=20}) => (
+const StopIcon = ({size=22}) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
 );
-const PaperclipIcon = ({size=20}) => (
+const PaperclipIcon = ({size=22}) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
   </svg>
 );
-const SendIcon = ({size=20}) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="12" y1="19" x2="12" y2="5"/>
-    <polyline points="5 12 12 5 19 12"/>
+const CameraIcon = ({size=22}) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+    <circle cx="12" cy="13" r="4"/>
   </svg>
 );
 const AlertIcon = ({size=16}) => (
@@ -308,11 +299,8 @@ const App = () => {
   const [micBlocked, setMicBlocked] = useState(false);
   const [status, setStatus] = useState('idle');
 
-  // composer
-  const [draft, setDraft] = useState('');
-  const [attach, setAttach] = useState(null); // { name, size, type }
-  const taRef = useRef(null);
   const fileRef = useRef(null);
+  const cameraRef = useRef(null);
 
   useEffect(() => { if (MAX_BRIDGE && !MAX_SUPPORTS_MIC) setMicBlocked(true); }, []);
 
@@ -322,15 +310,7 @@ const App = () => {
     setErrors(e => ({...e, [name]: ''}));
   };
 
-  // автовысота textarea
-  const autoGrow = () => {
-    const el = taRef.current;
-    if (!el) return;
-    el.style.height = 'auto';
-    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
-  };
-
-  // микрофон: голос → разбор → заполнение полей
+  // микрофон
   const onMic = async () => {
     if (listening) { setListening(false); return; }
     if (micBlocked) { showToast('Голосовой ввод недоступен в этом окружении'); return; }
@@ -354,37 +334,23 @@ const App = () => {
   };
 
   // скрепка
-  const onAttachClick = () => fileRef.current && fileRef.current.click();
+  const onAttach = () => fileRef.current && fileRef.current.click();
   const onAttachChange = (e) => {
     const f = e.target.files && e.target.files[0];
     if (!f) return;
-    setAttach({ name: f.name, size: f.size, type: f.type });
     showToast('Файл прикреплён: ' + f.name);
+    console.log('[ATTACH]', { name: f.name, size: f.size, type: f.type });
     e.target.value = '';
   };
-  const clearAttach = () => setAttach(null);
 
-  // отправить
-  const onSend = () => {
-    const text = draft.trim();
-    if (!text && !attach) { showToast('Введите текст или прикрепите файл'); return; }
-    // Если есть текст — пробуем применить к форме
-    if (text) {
-      const parsed = parseVoiceToFields(text, form);
-      const changed = Object.keys(parsed).filter(k => parsed[k] && parsed[k] !== form[k]);
-      if (changed.length) {
-        setForm(parsed);
-        showToast(`Применено: ${changed.join(', ')}`);
-      } else {
-        showToast('Отправлено (демо, без бэкенда)');
-      }
-    } else {
-      showToast('Файл отправлен (демо, без бэкенда)');
-    }
-    console.log('SEND', { text, attach });
-    setDraft('');
-    setAttach(null);
-    if (taRef.current) { taRef.current.style.height = 'auto'; }
+  // фотоаппарат
+  const onCamera = () => cameraRef.current && cameraRef.current.click();
+  const onCameraChange = (e) => {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    showToast('Фото прикреплено: ' + f.name);
+    console.log('[CAMERA]', { name: f.name, size: f.size, type: f.type });
+    e.target.value = '';
   };
 
   const checkSelfEmployed = () => {
@@ -446,7 +412,7 @@ const App = () => {
         <form onSubmit={submit} className="panel">
           <h2 className="panel__title">Данные</h2>
           <p className="t-caption" style={{marginBottom:14}}>
-            Ввод вручную или в подвале: микрофон — голосом, скрепка — файл, стрелка — отправить.
+            Ввод вручную или голосом через FAB-микрофон.
           </p>
 
           <div className="field">
@@ -490,41 +456,25 @@ const App = () => {
         </form>
       </div>
 
-      {/* ===== Подвал ===== */}
-      <div className="composer">
-        {attach && (
-          <div className="attach-preview">
-            <span>📎 {attach.name} ({Math.round(attach.size/1024)} КБ)</span>
-            <button type="button" onClick={clearAttach}>✕</button>
-          </div>
-        )}
-        <div className="composer__inner">
-          <button type="button" className="composer__btn" title="Прикрепить файл" onClick={onAttachClick}>
-            <PaperclipIcon />
-          </button>
-          <input ref={fileRef} type="file" hidden accept="image/*,audio/*,.pdf,.txt,.doc,.docx" onChange={onAttachChange} />
+      {/* ===== FAB-группа ===== */}
+      <div className="fab-group">
+        <button type="button" className={`fab-btn ${listening ? 'fab-btn--rec' : ''}`}
+          title={listening ? 'Остановить' : 'Голосом'} onClick={onMic} disabled={micBlocked}>
+          {listening ? <StopIcon /> : <MicIcon />}
+        </button>
 
-          <textarea
-            ref={taRef}
-            className="composer__ta"
-            placeholder="Сообщение или голосовая команда…"
-            rows={1}
-            value={draft}
-            onChange={(e)=>{ setDraft(e.target.value); autoGrow(); }}
-            onKeyDown={(e)=>{ if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); onSend(); } }}
-          />
+        <button type="button" className="fab-btn" title="Прикрепить файл" onClick={onAttach}>
+          <PaperclipIcon />
+        </button>
 
-          <button type="button" className={`composer__btn ${listening ? 'composer__btn--rec' : ''}`}
-            title={listening ? 'Остановить' : 'Голосом'} onClick={onMic} disabled={micBlocked}>
-            {listening ? <StopIcon size={18}/> : <MicIcon size={18}/>}
-          </button>
-
-          <button type="button" className="composer__btn composer__btn--send"
-            title="Отправить" onClick={onSend}>
-            <SendIcon size={20}/>
-          </button>
-        </div>
+        <button type="button" className="fab-btn" title="Сделать фото" onClick={onCamera}>
+          <CameraIcon />
+        </button>
       </div>
+
+      {/* скрытые input для файла и камеры */}
+      <input ref={fileRef} type="file" hidden accept="image/*,audio/*,.pdf,.txt,.doc,.docx" onChange={onAttachChange} />
+      <input ref={cameraRef} type="file" hidden accept="image/*" capture="environment" onChange={onCameraChange} />
 
       {toast && <div className="toast">{toast}</div>}
     </React.Fragment>
