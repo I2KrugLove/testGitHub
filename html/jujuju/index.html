@@ -3,7 +3,10 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<title>Регистрация водителя — голос + ручной ввод</title>
+<title>Регистрация водителя — MAX + ручной ввод</title>
+
+<!-- MAX Bridge -->
+<script src="https://st.max.ru/js/max-web-app.js"></script>
 
 <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -54,6 +57,7 @@
   .mic-btn:hover{background:var(--surface3)}
   .mic-btn:active{transform:scale(.95)}
   .mic-btn--rec{background:var(--danger);color:#fff;animation:pulse 1s infinite}
+  .mic-btn:disabled{opacity:.4;cursor:not-allowed}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.65}}
 
   .btn{appearance:none;border:none;font-family:inherit;font-size:15px;font-weight:600;
@@ -63,14 +67,11 @@
   .btn:disabled{opacity:.45;cursor:not-allowed}
   .btn--primary{background:var(--primary);color:#fff;width:100%}
   .btn--primary:hover:not(:disabled){background:var(--primaryH)}
-  .btn--secondary{background:var(--surface2);color:var(--text)}
-  .btn--secondary:hover:not(:disabled){background:var(--surface3)}
 
   .warn{display:flex;gap:10px;background:rgba(255,149,0,.12);color:#8a5a00;border:1px solid rgba(255,149,0,.3);
     border-radius:var(--r-md);padding:10px 12px;font-size:13px;line-height:1.4;margin-bottom:16px}
   .warn--err{background:rgba(255,59,48,.1);color:#a3231b;border-color:rgba(255,59,48,.3)}
 
-  /* FAB */
   .fab{
     position:fixed;right:calc(50% - 260px + 16px);bottom:20px;
     width:64px;height:64px;border-radius:50%;border:none;cursor:pointer;
@@ -80,6 +81,7 @@
   @media (max-width:552px){ .fab{right:16px} }
   .fab:active{transform:scale(.94)}
   .fab--rec{background:var(--danger);box-shadow:0 8px 24px rgba(255,59,48,.45);animation:pulse 1s infinite}
+  .fab:disabled{opacity:.4;cursor:not-allowed;animation:none}
 
   .toast{
     position:fixed;left:50%;bottom:100px;transform:translateX(-50%);
@@ -93,20 +95,18 @@
 <div id="root"></div>
 
 <script type="text/babel">
-const { useState, useRef, useEffect, useCallback } = React;
+const { useState, useRef, useEffect } = React;
 
+// ============ ИКОНКИ ============
 const MicIcon = ({size=20}) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <rect x="9" y="2" width="6" height="12" rx="3"/>
     <path d="M5 10v1a7 7 0 0 0 14 0v-1"/>
-    <line x1="12" y1="19" x2="12" y2="22"/>
-    <line x1="8" y1="22" x2="16" y2="22"/>
+    <line x1="12" y1="19" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/>
   </svg>
 );
 const StopIcon = ({size=20}) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
-    <rect x="6" y="6" width="12" height="12" rx="2"/>
-  </svg>
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
 );
 const AlertIcon = ({size=16}) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -115,13 +115,83 @@ const AlertIcon = ({size=16}) => (
   </svg>
 );
 
-// ---------- распознавание ----------
+// ============ ОКРУЖЕНИЕ ============
+const MAX_BRIDGE = !!(window.WebApp && window.WebApp.platform);
+const MAX_PLATFORM = MAX_BRIDGE ? window.WebApp.platform : null;
+const MAX_SUPPORTS_MIC = MAX_BRIDGE && (MAX_PLATFORM === 'android' || MAX_PLATFORM === 'web');
+
+// ============ ЗАПИСЬ АУДИО (MAX) ============
+// Запрашивает разрешение через MAX Bridge (если доступно) и пишет аудио через MediaRecorder.
+// Возвращает Promise<Blob> — аудио для отправки на бэкенд STT.
+async function recordAudioViaMax() {
+  // 1. Проверка платформы
+  if (!MAX_SUPPORTS_MIC) {
+    throw new Error('Микрофон в MAX доступен только на Android и в веб-клиенте');
+  }
+
+  // 2. Запрос разрешения через PermissionsManager (API пока не документирован детально)
+  //    Пытаемся вызвать возможные методы; если их нет — показываем понятную ошибку.
+  const PM = window.WebApp.PermissionsManager;
+  if (PM) {
+    // Пробуем разные варианты именования (официального примера нет)
+    const requestFn = PM.requestMicrophone || PM.requestPermission;
+    if (typeof requestFn === 'function') {
+      try {
+        await requestFn.call(PM, 'microphone');
+      } catch (e) {
+        throw new Error('Пользователь отклонил доступ к микрофону');
+      }
+    } else {
+      // Объект есть, но метода нет — вероятно, версия клиента старая
+      throw new Error('Текущая версия MAX не поддерживает запрос микрофона через Bridge');
+    }
+  } else {
+    // PermissionsManager отсутствует — в веб-клиенте может сработать стандартный getUserMedia
+    console.warn('PermissionsManager не найден, пробуем стандартный getUserMedia');
+  }
+
+  // 3. Запись через MediaRecorder
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  } catch (e) {
+    throw new Error('Не удалось получить доступ к микрофону: ' + e.message);
+  }
+
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    let mr;
+    try {
+      mr = new MediaRecorder(stream);
+    } catch (e) {
+      stream.getTracks().forEach(t => t.stop());
+      reject(new Error('MediaRecorder не поддерживается: ' + e.message));
+      return;
+    }
+
+    mr.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+    mr.onstop = () => {
+      stream.getTracks().forEach(t => t.stop());
+      const blob = new Blob(chunks, { type: 'audio/webm' });
+      if (blob.size === 0) { reject(new Error('Запись пустая')); return; }
+      resolve(blob);
+    };
+    mr.onerror = () => {
+      stream.getTracks().forEach(t => t.stop());
+      reject(new Error('Ошибка записи'));
+    };
+
+    mr.start();
+    // Авто-стоп через 12 секунд
+    setTimeout(() => { if (mr.state !== 'inactive') mr.stop(); }, 12000);
+  });
+}
+
+// ============ РАСПОЗНАВАНИЕ (БРАУЗЕР) ============
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 const HAS_SR = !!SR;
 
-// Универсальная функция: распознать одну фразу, вернуть текст (Promise).
-// В MAX Mini App: замените тело на вызов вашего бэкенда (upload audio -> STT -> text).
-function recognizeOnce({ lang='ru-RU' } = {}) {
+function recognizeViaBrowser({ lang = 'ru-RU' } = {}) {
   return new Promise((resolve, reject) => {
     if (!HAS_SR) return reject(new Error('SpeechRecognition недоступен'));
     const rec = new SR();
@@ -136,28 +206,33 @@ function recognizeOnce({ lang='ru-RU' } = {}) {
       const txt = Array.from(e.results).map(r => r[0].transcript).join(' ').trim();
       resolve(txt);
     };
-    rec.onerror = (e) => {
-      if (done) return;
-      done = true;
-      reject(new Error(e.error || 'speech error'));
-    };
-    rec.onend = () => {
-      if (done) return;
-      done = true;
-      resolve(''); // пусто — ничего не услышали
-    };
+    rec.onerror = (e) => { if (!done) { done = true; reject(new Error(e.error || 'speech error')); } };
+    rec.onend = () => { if (!done) { done = true; resolve(''); } };
     try { rec.start(); } catch (err) { reject(err); }
-    // страховка на 15 сек
     setTimeout(() => { try{rec.stop()}catch(_){} }, 15000);
   });
 }
 
-// ---------- «умное» извлечение полей из свободной фразы ----------
+// ============ ГЛАВНАЯ ФУНКЦИЯ РАСПОЗНАВАНИЯ ============
+// В MAX: запись + (заглушка) отправка на бэкенд. Возвращает '' — текст нужно ввести вручную или дождаться бэкенда.
+// В браузере: SpeechRecognition.
+async function recognizeOnce() {
+  if (MAX_BRIDGE) {
+    const blob = await recordAudioViaMax();
+    // БЭКЕНДА НЕТ: выводим в консоль и возвращаем пустую строку.
+    // Когда появится бэкенд — замените на:
+    // const text = await uploadToBackend(blob); return text;
+    console.log('[MAX] Аудио записано, размер:', blob.size, 'байт. Отправьте на бэкенд для STT.');
+    return ''; // пользователь увидит подсказку "введите вручную"
+  }
+  return recognizeViaBrowser();
+}
+
+// ============ ПАРСЕР ФРАЗЫ ============
 function parseVoiceToFields(raw, current) {
   const text = ' ' + raw.toLowerCase() + ' ';
   const out = { ...current };
 
-  // телефон (11 цифр, +7/8)
   const phoneMatch = raw.match(/(?:\+?7|8)?[\s\-()]*\d{3}[\s\-()]*\d{3}[\s\-()]*\d{2}[\s\-()]*\d{2}/);
   if (phoneMatch) {
     let d = phoneMatch[0].replace(/\D/g,'');
@@ -165,40 +240,31 @@ function parseVoiceToFields(raw, current) {
     out.phone = '+' + d;
   }
 
-  // email
   const emailMatch = raw.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
   if (emailMatch) out.email = emailMatch[0];
 
-  // стаж
   const expMatch = text.match(/(?:стаж|опыт)\D{0,10}(\d{1,2})/);
   if (expMatch) out.experience = expMatch[1];
 
-  // транспорт
   const trMap = [
-    [/велосипед|вело/,'Велосипед'],
-    [/самокат|скутер/,'Самокат'],
-    [/мотоцикл|мото/,'Мотоцикл'],
-    [/пешком|пеший/,'Пешком'],
-    [/авто|машин|легков/,'Автомобиль'],
+    [/велосипед|вело/,'Велосипед'], [/самокат|скутер/,'Самокат'],
+    [/мотоцикл|мото/,'Мотоцикл'], [/пешком|пеший/,'Пешком'], [/авто|машин|легков/,'Автомобиль'],
   ];
   for (const [re, val] of trMap) if (re.test(text)) { out.transport = val; break; }
 
-  // ФИО — три слова с заглавной буквы подряд
   const fioMatch = raw.match(/([А-ЯЁ][а-яё]+)\s+([А-ЯЁ][а-яё]+)\s+([А-ЯЁ][а-яё]+)/);
   if (fioMatch) out.fio = fioMatch[0];
 
-  // город — после "город" / "в городе"
   const cityMatch = raw.match(/(?:город|городе|из)\s+([А-ЯЁ][а-яё\-]+)/i);
   if (cityMatch) out.city = cityMatch[1].replace(/^./, c => c.toUpperCase());
 
-  // номер ТС — буква цифры буква
   const plateMatch = raw.match(/[АВЕКМНОРСТУХ]\s?\d{3}\s?[АВЕКМНОРСТУХ]{2}/i);
   if (plateMatch) out.plate = plateMatch[0].toUpperCase();
 
   return out;
 }
 
-// ---------- иконка поля ----------
+// ============ КОМПОНЕНТ ПОЛЯ ============
 const Field = ({ label, name, value, onChange, placeholder, type='text', error, onMic, recording, disabled, children }) => (
   <div className="field">
     <label className="field__label">{label}</label>
@@ -206,21 +272,14 @@ const Field = ({ label, name, value, onChange, placeholder, type='text', error, 
       {children ? children : (
         <input
           className={`input ${error ? 'input--error' : ''}`}
-          type={type}
-          value={value}
-          placeholder={placeholder}
-          disabled={disabled}
+          type={type} value={value} placeholder={placeholder} disabled={disabled}
           onChange={(e) => onChange(name, e.target.value)}
         />
       )}
       {onMic && (
-        <button
-          type="button"
-          className={`mic-btn ${recording ? 'mic-btn--rec' : ''}`}
+        <button type="button" className={`mic-btn ${recording ? 'mic-btn--rec' : ''}`}
           title={recording ? 'Слушаю...' : 'Голосом'}
-          onClick={() => onMic(name)}
-          disabled={disabled}
-        >
+          onClick={() => onMic(name)} disabled={disabled}>
           {recording ? <StopIcon size={18}/> : <MicIcon size={18}/>}
         </button>
       )}
@@ -229,44 +288,46 @@ const Field = ({ label, name, value, onChange, placeholder, type='text', error, 
   </div>
 );
 
+// ============ ПРИЛОЖЕНИЕ ============
 const App = () => {
-  const initial = {
-    fio:'', phone:'', city:'', transport:'', plate:'', experience:'', email:''
-  };
+  const initial = { fio:'', phone:'', city:'', transport:'', plate:'', experience:'', email:'' };
   const [form, setForm] = useState(initial);
   const [errors, setErrors] = useState({});
   const [toast, setToast] = useState('');
-  const [listeningField, setListeningField] = useState(null); // имя поля или '__free__'
+  const [listeningField, setListeningField] = useState(null);
   const [submitted, setSubmitted] = useState(false);
+  const [micBlocked, setMicBlocked] = useState(false); // true, если окружение не поддерживает
 
-  const fieldRef = useRef(null); // ссылка на текущую сессию распознавания
+  useEffect(() => {
+    // Если MAX и платформа не поддерживает микрофон — блокируем
+    if (MAX_BRIDGE && !MAX_SUPPORTS_MIC) {
+      setMicBlocked(true);
+    }
+  }, []);
 
-  const showToast = (t) => { setToast(t); setTimeout(()=>setToast(''), 1800); };
-
+  const showToast = (t) => { setToast(t); setTimeout(()=>setToast(''), 2000); };
   const setField = (name, val) => {
     setForm(f => ({...f, [name]: val}));
     setErrors(e => ({...e, [name]: ''}));
   };
 
-  // Голос в конкретное поле
   const startFieldVoice = async (name) => {
-    if (!HAS_SR) { showToast('Голосовой ввод недоступен в этом окружении'); return; }
     if (listeningField) return;
+    if (micBlocked) { showToast('Голосовой ввод недоступен в этом окружении'); return; }
     setListeningField(name);
     try {
       const txt = await recognizeOnce();
       if (txt) {
-        // для телефона/стажа — нормализуем
         if (name === 'phone') {
           const d = txt.replace(/\D/g,'');
-          if (d.length >= 10) setField(name, '+' + (d[0]==='8'?('7'+d.slice(1)):d));
-          else setField(name, txt);
+          setField(name, d.length >= 10 ? '+' + (d[0]==='8'?('7'+d.slice(1)):d) : txt);
         } else {
           setField(name, txt);
         }
-        showToast('Записано в «' + name + '»');
+        showToast('Записано');
       } else {
-        showToast('Не расслышал');
+        // В MAX сюда попадаем всегда (бэкенда нет) — подсказываем
+        showToast(MAX_BRIDGE ? 'Аудио записано. Распознавание появится после подключения бэкенда.' : 'Не расслышал');
       }
     } catch (e) {
       showToast('Ошибка: ' + e.message);
@@ -275,14 +336,16 @@ const App = () => {
     }
   };
 
-  // FAB — свободная фраза
   const startFreeVoice = async () => {
-    if (!HAS_SR) { showToast('Голосовой ввод недоступен в этом окружении'); return; }
     if (listeningField) { setListeningField(null); return; }
+    if (micBlocked) { showToast('Голосовой ввод недоступен в этом окружении'); return; }
     setListeningField('__free__');
     try {
       const txt = await recognizeOnce();
-      if (!txt) { showToast('Не расслышал'); return; }
+      if (!txt) {
+        showToast(MAX_BRIDGE ? 'Аудио записано. Распознавание появится после подключения бэкенда.' : 'Не расслышал');
+        return;
+      }
       const parsed = parseVoiceToFields(txt, form);
       const changed = Object.keys(parsed).filter(k => parsed[k] && parsed[k] !== form[k]);
       setForm(parsed);
@@ -297,8 +360,8 @@ const App = () => {
 
   const validate = () => {
     const e = {};
-    if (!form.fio.trim() || form.fio.trim().split(/\s+/).length < 2) e.fio = 'Укажите ФИО (минимум имя и фамилия)';
-    if (!/^\+7\d{10}$/.test(form.phone)) e.phone = 'Телефон в формате +7XXXXXXXXXX';
+    if (!form.fio.trim() || form.fio.trim().split(/\s+/).length < 2) e.fio = 'Укажите ФИО';
+    if (!/^\+7\d{10}$/.test(form.phone)) e.phone = 'Телефон +7XXXXXXXXXX';
     if (!form.city.trim()) e.city = 'Укажите город';
     if (!form.transport) e.transport = 'Выберите транспорт';
     if (!form.experience || +form.experience < 0) e.experience = 'Стаж числом';
@@ -310,75 +373,70 @@ const App = () => {
   const submit = (ev) => {
     ev.preventDefault();
     if (!validate()) { showToast('Проверьте поля'); return; }
-    // здесь был бы POST на бэкенд
-    console.log('SUBMIT', form);
+    console.log('SUBMIT (бэкенда нет):', form);
     setSubmitted(true);
-    showToast('Заявка отправлена');
+    showToast('Заявка отправлена (демо)');
   };
 
   return (
     <React.Fragment>
-      <div className="top-bar">
-        <div className="top-bar__inner"><span className="brand">Регистрация водителя</span></div>
-      </div>
+      <div className="top-bar"><div className="top-bar__inner"><span className="brand">Регистрация водителя</span></div></div>
 
       <div className="app">
-        {!HAS_SR && (
+        {micBlocked && (
+          <div className="warn warn--err">
+            <span><AlertIcon/></span>
+            <span>Голосовой ввод в MAX доступен только на Android и в веб-клиенте. Используйте ручной ввод.</span>
+          </div>
+        )}
+        {!MAX_BRIDGE && !HAS_SR && (
           <div className="warn">
             <span><AlertIcon/></span>
-            <span>Голосовой ввод недоступен: этот браузер/окружение не поддерживает SpeechRecognition. Ручной ввод работает. В MAX Mini App подключите MAX Bridge + бэкенд STT.</span>
+            <span>SpeechRecognition не поддерживается. Ручной ввод работает.</span>
+          </div>
+        )}
+        {MAX_BRIDGE && MAX_SUPPORTS_MIC && (
+          <div className="warn" style={{background:'rgba(0,122,255,.08)', color:'#0055cc', borderColor:'rgba(0,122,255,.2)'}}>
+            <span>ℹ️</span>
+            <span>MAX Bridge подключён. Аудио записывается, но текст появится после подключения вашего бэкенда STT.</span>
           </div>
         )}
 
         <form onSubmit={submit} className="panel">
           <h2 className="panel__title">Данные</h2>
-          <p className="t-caption" style={{marginBottom:14}}>
-            Можно вводить вручную или нажать 🎤 у поля. Кнопка внизу — сказать всё одной фразой.
-          </p>
+          <p className="t-caption" style={{marginBottom:14}}>Ввод вручную или 🎤 у поля. FAB внизу — сказать всё одной фразой.</p>
 
           <Field label="ФИО" name="fio" value={form.fio} onChange={setField} placeholder="Иванов Иван Иванович"
-                 error={errors.fio} onMic={startFieldVoice} recording={listeningField==='fio'} />
+                 error={errors.fio} onMic={startFieldVoice} recording={listeningField==='fio'} disabled={micBlocked} />
           <Field label="Телефон" name="phone" value={form.phone} onChange={setField} placeholder="+79001234567" type="tel"
-                 error={errors.phone} onMic={startFieldVoice} recording={listeningField==='phone'} />
+                 error={errors.phone} onMic={startFieldVoice} recording={listeningField==='phone'} disabled={micBlocked} />
           <Field label="Город" name="city" value={form.city} onChange={setField} placeholder="Москва"
-                 error={errors.city} onMic={startFieldVoice} recording={listeningField==='city'} />
+                 error={errors.city} onMic={startFieldVoice} recording={listeningField==='city'} disabled={micBlocked} />
 
           <Field label="Транспорт" name="transport" value={form.transport} onChange={setField} error={errors.transport}
-                 onMic={startFieldVoice} recording={listeningField==='transport'}>
+                 onMic={startFieldVoice} recording={listeningField==='transport'} disabled={micBlocked}>
             <select className="select" value={form.transport} onChange={(e)=>setField('transport', e.target.value)}>
               <option value="">— выберите —</option>
-              <option>Велосипед</option>
-              <option>Самокат</option>
-              <option>Мотоцикл</option>
-              <option>Автомобиль</option>
-              <option>Пешком</option>
+              <option>Велосипед</option><option>Самокат</option><option>Мотоцикл</option>
+              <option>Автомобиль</option><option>Пешком</option>
             </select>
           </Field>
 
           <Field label="Номер ТС" name="plate" value={form.plate} onChange={setField} placeholder="А123ВС77"
-                 onMic={startFieldVoice} recording={listeningField==='plate'} />
+                 onMic={startFieldVoice} recording={listeningField==='plate'} disabled={micBlocked} />
           <Field label="Стаж, лет" name="experience" value={form.experience} onChange={setField} placeholder="3" type="number"
-                 error={errors.experience} onMic={startFieldVoice} recording={listeningField==='experience'} />
+                 error={errors.experience} onMic={startFieldVoice} recording={listeningField==='experience'} disabled={micBlocked} />
           <Field label="Email (необязательно)" name="email" value={form.email} onChange={setField} placeholder="you@example.com" type="email"
-                 error={errors.email} onMic={startFieldVoice} recording={listeningField==='email'} />
+                 error={errors.email} onMic={startFieldVoice} recording={listeningField==='email'} disabled={micBlocked} />
 
           <button type="submit" className="btn btn--primary" style={{marginTop:6}}>Отправить заявку</button>
           {submitted && <p className="ok-text">✓ Заявка отправлена (демо, без бэкенда)</p>}
         </form>
-
-        <div className="panel" style={{background:'var(--surface2)'}}>
-          <h3 className="panel__title" style={{fontSize:14}}>Пример фразы для FAB</h3>
-          <p className="t-caption" style={{marginTop:6}}>
-            «Иванов Иван Иванович, телефон +7 900 123 45 67, город Москва, самокат, номер А123ВС77, стаж 3, почта ivan@mail.ru»
-          </p>
-        </div>
       </div>
 
-      <button
-        className={`fab ${listeningField==='__free__' ? 'fab--rec' : ''}`}
-        onClick={startFreeVoice}
-        title="Сказать всё одной фразой"
-      >
+      <button className={`fab ${listeningField==='__free__' ? 'fab--rec' : ''}`}
+        onClick={startFreeVoice} disabled={micBlocked}
+        title={micBlocked ? 'Голосовой ввод недоступен' : 'Сказать всё одной фразой'}>
         {listeningField==='__free__' ? <StopIcon size={26}/> : <MicIcon size={26}/>}
       </button>
 
