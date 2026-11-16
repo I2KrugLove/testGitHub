@@ -28,10 +28,7 @@
     backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);
     border-bottom:1px solid var(--border);z-index:100}
   .top-bar__inner{max-width:520px;height:100%;margin:0 auto;padding:0 16px;display:flex;align-items:center;gap:8px}
-  /* было brand: 17px / 700 — тот же стиль теперь используется в .page-title */
   .brand{font-size:17px;font-weight:700}
-
-  .page-title{font-size:17px;font-weight:700;margin:0 0 16px;line-height:1.2}
 
   .panel{background:var(--surface);border-radius:var(--r-lg);padding:16px;margin-bottom:16px}
   .panel__title{font-size:16px;font-weight:600;margin:0 0 4px}
@@ -47,19 +44,6 @@
   .input:focus,.select:focus{background:var(--surface);border-color:var(--primary)}
   .input::placeholder{color:var(--text3)}
   .input--error{border-color:var(--danger);background:#fff5f5}
-
-  /* ФИО как единое поле: один контейнер, три инпута внутри без своих рамок */
-  .fio-group{
-    display:flex;gap:4px;
-    background:var(--surface2);border:1px solid transparent;border-radius:var(--r-md);
-    padding:4px;transition:border-color .15s, background .15s;
-  }
-  .fio-group:focus-within{background:var(--surface);border-color:var(--primary)}
-  .fio-group.input--error{border-color:var(--danger);background:#fff5f5}
-  .fio-group .input{
-    background:transparent;border:none;padding:8px 8px;border-radius:8px;min-width:0;
-  }
-  .fio-group .input:focus{background:rgba(0,122,255,.06);border:none}
 
   .status-row{display:flex;align-items:center;gap:8px;padding:12px 14px;border-radius:var(--r-md);background:var(--surface2);font-size:14px}
   .status-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
@@ -85,7 +69,6 @@
   .warn--err{background:rgba(255,59,48,.1);color:#a3231b;border-color:rgba(255,59,48,.3)}
   .warn--info{background:rgba(0,122,255,.08);color:#0055cc;border-color:rgba(0,122,255,.2)}
 
-  /* ===== FAB-группа ===== */
   .fab-group{
     position:fixed;right:16px;bottom:calc(var(--composer-h) + 20px);
     display:flex;flex-direction:column;gap:12px;z-index:150;
@@ -112,7 +95,6 @@
   .fab-btn:disabled{opacity:.4;cursor:not-allowed;box-shadow:none}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.65}}
 
-  /* ===== Подвал (composer) ===== */
   .composer{
     position:fixed;left:0;right:0;bottom:0;
     background:rgba(245,245,247,.92);
@@ -459,12 +441,12 @@ const App = () => {
   return (
     <React.Fragment>
       <div className="top-bar">
-        <div className="top-bar__inner"><span className="brand">&lt;Branding area&gt;</span></div>
+        <div className="top-bar__inner">
+          <span className="brand">&lt;Branding area&gt; Регистрация водителя</span>
+        </div>
       </div>
 
       <div className="app">
-        <h1 className="page-title">Регистрация водителя</h1>
-
         {micBlocked && (
           <div className="warn warn--err">
             <span><AlertIcon/></span>
@@ -490,23 +472,9 @@ const App = () => {
             Ввод вручную или голосом. Внизу — текстовое поле, стрелка отправляет.
           </p>
 
-          {/* ФИО как обычное поле: одна подпись + один визуальный блок */}
-          <div className="field">
-            <label className="field__label">ФИО</label>
-            <div className={`fio-group ${(errors.lastName || errors.firstName) ? 'input--error' : ''}`}>
-              <input className="input" placeholder="Фамилия"
-                value={form.lastName} onChange={(e)=>setField('lastName', e.target.value)} />
-              <input className="input" placeholder="Имя"
-                value={form.firstName} onChange={(e)=>setField('firstName', e.target.value)} />
-              <input className="input" placeholder="Отчество"
-                value={form.middleName} onChange={(e)=>setField('middleName', e.target.value)} />
-            </div>
-            {(errors.lastName || errors.firstName) && (
-              <p className="t-caption" style={{color:'var(--danger)', marginTop:4}}>
-                {errors.lastName || errors.firstName}
-              </p>
-            )}
-          </div>
+          <Field label="Фамилия" name="lastName" value={form.lastName} onChange={setField} placeholder="Иванов" error={errors.lastName} />
+          <Field label="Имя" name="firstName" value={form.firstName} onChange={setField} placeholder="Иван" error={errors.firstName} />
+          <Field label="Отчество" name="middleName" value={form.middleName} onChange={setField} placeholder="Иванович" />
 
           <Field label="Телефон" name="phone" value={form.phone} onChange={setField} placeholder="+79001234567" type="tel" error={errors.phone} />
           <Field label="Город" name="city" value={form.city} onChange={setField} placeholder="Москва" error={errors.city} />
@@ -532,7 +500,6 @@ const App = () => {
         </form>
       </div>
 
-      {/* ===== FAB-группа ===== */}
       <div className="fab-group">
         <button type="button" className={`fab-btn ${listening ? 'fab-btn--rec' : ''}`}
           title={listening ? 'Остановить' : 'Голосом'} onClick={onMic} disabled={micBlocked}>
@@ -549,7 +516,6 @@ const App = () => {
       <input ref={fileRef} type="file" hidden accept="image/*,audio/*,.pdf,.txt,.doc,.docx" onChange={onAttachChange} />
       <input ref={cameraRef} type="file" hidden accept="image/*" capture="environment" onChange={onCameraChange} />
 
-      {/* ===== Подвал ===== */}
       <div className="composer">
         <div className="composer__inner">
           <textarea
