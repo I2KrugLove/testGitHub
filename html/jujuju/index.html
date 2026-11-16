@@ -63,6 +63,11 @@
   .btn:disabled{opacity:.45;cursor:not-allowed}
   .btn--primary{background:var(--primary);color:#fff;width:100%}
   .btn--primary:hover:not(:disabled){background:var(--primaryH)}
+  .btn--secondary{background:var(--surface2);color:var(--text)}
+  .btn--secondary:hover:not(:disabled){background:var(--surface3)}
+
+  .actions-row{display:flex;gap:10px;margin-top:6px}
+  .actions-row .btn{flex:1}
 
   .warn{display:flex;gap:10px;background:rgba(255,149,0,.12);color:#8a5a00;border:1px solid rgba(255,149,0,.3);
     border-radius:var(--r-md);padding:10px 12px;font-size:13px;line-height:1.4;margin-bottom:16px}
@@ -134,7 +139,6 @@
   }
   .ok-text{color:var(--ok);font-size:13px;margin-top:4px}
 
-  /* ===== Модалка отладки ===== */
   .modal-backdrop{
     position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:400;
     display:flex;align-items:center;justify-content:center;padding:16px;
@@ -196,6 +200,24 @@ const AlertIcon = ({size=16}) => (
 const MAX_BRIDGE = !!(window.WebApp && window.WebApp.platform);
 const MAX_PLATFORM = MAX_BRIDGE ? window.WebApp.platform : null;
 const MAX_SUPPORTS_MIC = MAX_BRIDGE && (MAX_PLATFORM === 'android' || MAX_PLATFORM === 'web');
+
+// ============ ЗАКРЫТИЕ ПРИЛОЖЕНИЯ ============
+function closeApp(showToast) {
+  try {
+    if (MAX_BRIDGE && window.WebApp && typeof window.WebApp.close === 'function') {
+      window.WebApp.close();
+      return;
+    }
+  } catch (e) {
+    console.warn('WebApp.close() failed:', e);
+  }
+  // обычный браузер
+  try { window.close(); } catch (e) {}
+  // Если окно не закрылось (браузер часто блокирует) — сообщим пользователю
+  setTimeout(() => {
+    showToast('Браузер не даёт закрыть вкладку. Закройте вручную или вернитесь назад.');
+  }, 200);
+}
 
 // ============ ЗАПИСЬ АУДИО (MAX) ============
 async function recordAudioViaMax() {
@@ -346,7 +368,7 @@ const DebugModal = ({ onClose }) => {
     ['Language', user && user.language_code ? user.language_code : '—'],
     ['Chat ID', chat && chat.id != null ? String(chat.id) : '—'],
     ['Chat type', chat && chat.type ? chat.type : '—'],
-    ['UserInfo (raw)', user ? JSON.stringify(user, null, 0) : '—'],
+    ['UserInfo (raw)', user ? JSON.stringify(user) : '—'],
   ];
 
   return (
@@ -389,7 +411,7 @@ const App = () => {
 
   useEffect(() => { if (MAX_BRIDGE && !MAX_SUPPORTS_MIC) setMicBlocked(true); }, []);
 
-  const showToast = (t) => { setToast(t); setTimeout(()=>setToast(''), 2000); };
+  const showToast = (t) => { setToast(t); setTimeout(()=>setToast(''), 2500); };
   const setField = (name, val) => {
     setForm(f => ({...f, [name]: val}));
     setErrors(e => ({...e, [name]: ''}));
@@ -490,6 +512,8 @@ const App = () => {
     showToast('Заявка отправлена (демо)');
   };
 
+  const handleClose = () => closeApp(showToast);
+
   return (
     <React.Fragment>
       <div className="top-bar">
@@ -549,7 +573,10 @@ const App = () => {
 
           <Field label="Email (необязательно)" name="email" value={form.email} onChange={setField} placeholder="you@example.com" type="email" error={errors.email} />
 
-          <button type="submit" className="btn btn--primary" style={{marginTop:6}}>Отправить заявку</button>
+          <div className="actions-row">
+            <button type="submit" className="btn btn--primary">Отправить заявку</button>
+            <button type="button" className="btn btn--secondary" onClick={handleClose}>Закрыть</button>
+          </div>
           {submitted && <p className="ok-text">✓ Заявка отправлена (демо, без бэкенда)</p>}
         </form>
       </div>
@@ -594,7 +621,7 @@ const App = () => {
   );
 };
 
-ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+ReactDOM.createRoot(document.getElementById('root')).render(<App>);
 </script>
 </body>
 </html>
