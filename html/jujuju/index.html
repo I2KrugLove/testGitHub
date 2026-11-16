@@ -5,9 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 <title>Регистрация водителя — MAX + ручной ввод</title>
 
-<!-- MAX Bridge -->
 <script src="https://st.max.ru/js/max-web-app.js"></script>
-
 <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -17,8 +15,8 @@
     --bg:#f5f5f7; --surface:#fff; --surface2:#f0f0f3; --surface3:#e8e8ec;
     --text:#000; --text2:#6b6b70; --text3:#9a9aa0;
     --border:rgba(0,0,0,.08); --primary:#007aff; --primaryH:#0066d6;
-    --danger:#ff3b30; --ok:#34c759;
-    --r-sm:8px; --r-md:12px; --r-lg:16px;
+    --danger:#ff3b30; --ok:#34c759; --warn:#ff9500;
+    --r-md:12px; --r-lg:16px;
     --font:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
     --top:56px; --bottom:88px;
   }
@@ -35,7 +33,6 @@
   .panel{background:var(--surface);border-radius:var(--r-lg);padding:16px;margin-bottom:16px}
   .panel__title{font-size:16px;font-weight:600;margin:0 0 4px}
   .t-caption{font-size:13px;color:var(--text2);margin:0}
-  .t-body{font-size:15px;margin:0}
 
   .field{margin-bottom:14px}
   .field__label{display:block;font-size:13px;color:var(--text2);margin-bottom:6px;font-weight:500}
@@ -49,16 +46,20 @@
   .input::placeholder{color:var(--text3)}
   .input--error{border-color:var(--danger);background:#fff5f5}
 
-  .mic-btn{
-    flex:0 0 46px;width:46px;height:46px;border-radius:var(--r-md);border:none;
-    background:var(--surface2);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;
-    transition:background .15s, transform .05s, color .15s;
-  }
-  .mic-btn:hover{background:var(--surface3)}
-  .mic-btn:active{transform:scale(.95)}
-  .mic-btn--rec{background:var(--danger);color:#fff;animation:pulse 1s infinite}
-  .mic-btn:disabled{opacity:.4;cursor:not-allowed}
-  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.65}}
+  /* 3 поля ФИО в ряд */
+  .fio-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+
+  /* Статус самозанятого */
+  .status-row{display:flex;align-items:center;gap:8px;padding:12px 14px;border-radius:var(--r-md);background:var(--surface2);font-size:14px}
+  .status-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+  .status--ok{background:rgba(52,199,89,.12);color:#1a7a34}
+  .status--ok .status-dot{background:var(--ok)}
+  .status--pending{background:rgba(255,149,0,.12);color:#8a5a00}
+  .status--pending .status-dot{background:var(--warn)}
+  .status--err{background:rgba(255,59,48,.1);color:#a3231b}
+  .status--err .status-dot{background:var(--danger)}
+  .status--idle{color:var(--text2)}
+  .status--idle .status-dot{background:var(--text3)}
 
   .btn{appearance:none;border:none;font-family:inherit;font-size:15px;font-weight:600;
     padding:12px 18px;border-radius:var(--r-md);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;
@@ -71,6 +72,7 @@
   .warn{display:flex;gap:10px;background:rgba(255,149,0,.12);color:#8a5a00;border:1px solid rgba(255,149,0,.3);
     border-radius:var(--r-md);padding:10px 12px;font-size:13px;line-height:1.4;margin-bottom:16px}
   .warn--err{background:rgba(255,59,48,.1);color:#a3231b;border-color:rgba(255,59,48,.3)}
+  .warn--info{background:rgba(0,122,255,.08);color:#0055cc;border-color:rgba(0,122,255,.2)}
 
   .fab{
     position:fixed;right:calc(50% - 260px + 16px);bottom:20px;
@@ -82,6 +84,7 @@
   .fab:active{transform:scale(.94)}
   .fab--rec{background:var(--danger);box-shadow:0 8px 24px rgba(255,59,48,.45);animation:pulse 1s infinite}
   .fab:disabled{opacity:.4;cursor:not-allowed;animation:none}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.65}}
 
   .toast{
     position:fixed;left:50%;bottom:100px;transform:translateX(-50%);
@@ -95,7 +98,7 @@
 <div id="root"></div>
 
 <script type="text/babel">
-const { useState, useRef, useEffect } = React;
+const { useState, useEffect } = React;
 
 // ============ ИКОНКИ ============
 const MicIcon = ({size=20}) => (
@@ -121,53 +124,31 @@ const MAX_PLATFORM = MAX_BRIDGE ? window.WebApp.platform : null;
 const MAX_SUPPORTS_MIC = MAX_BRIDGE && (MAX_PLATFORM === 'android' || MAX_PLATFORM === 'web');
 
 // ============ ЗАПИСЬ АУДИО (MAX) ============
-// Запрашивает разрешение через MAX Bridge (если доступно) и пишет аудио через MediaRecorder.
-// Возвращает Promise<Blob> — аудио для отправки на бэкенд STT.
 async function recordAudioViaMax() {
-  // 1. Проверка платформы
-  if (!MAX_SUPPORTS_MIC) {
-    throw new Error('Микрофон в MAX доступен только на Android и в веб-клиенте');
-  }
+  if (!MAX_SUPPORTS_MIC) throw new Error('Микрофон в MAX доступен только на Android и в веб-клиенте');
 
-  // 2. Запрос разрешения через PermissionsManager (API пока не документирован детально)
-  //    Пытаемся вызвать возможные методы; если их нет — показываем понятную ошибку.
   const PM = window.WebApp.PermissionsManager;
   if (PM) {
-    // Пробуем разные варианты именования (официального примера нет)
     const requestFn = PM.requestMicrophone || PM.requestPermission;
     if (typeof requestFn === 'function') {
-      try {
-        await requestFn.call(PM, 'microphone');
-      } catch (e) {
-        throw new Error('Пользователь отклонил доступ к микрофону');
-      }
+      try { await requestFn.call(PM, 'microphone'); }
+      catch (e) { throw new Error('Пользователь отклонил доступ к микрофону'); }
     } else {
-      // Объект есть, но метода нет — вероятно, версия клиента старая
       throw new Error('Текущая версия MAX не поддерживает запрос микрофона через Bridge');
     }
   } else {
-    // PermissionsManager отсутствует — в веб-клиенте может сработать стандартный getUserMedia
     console.warn('PermissionsManager не найден, пробуем стандартный getUserMedia');
   }
 
-  // 3. Запись через MediaRecorder
   let stream;
-  try {
-    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-  } catch (e) {
-    throw new Error('Не удалось получить доступ к микрофону: ' + e.message);
-  }
+  try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+  catch (e) { throw new Error('Не удалось получить доступ к микрофону: ' + e.message); }
 
   return new Promise((resolve, reject) => {
     const chunks = [];
     let mr;
-    try {
-      mr = new MediaRecorder(stream);
-    } catch (e) {
-      stream.getTracks().forEach(t => t.stop());
-      reject(new Error('MediaRecorder не поддерживается: ' + e.message));
-      return;
-    }
+    try { mr = new MediaRecorder(stream); }
+    catch (e) { stream.getTracks().forEach(t => t.stop()); reject(new Error('MediaRecorder не поддерживается: ' + e.message)); return; }
 
     mr.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
     mr.onstop = () => {
@@ -176,13 +157,8 @@ async function recordAudioViaMax() {
       if (blob.size === 0) { reject(new Error('Запись пустая')); return; }
       resolve(blob);
     };
-    mr.onerror = () => {
-      stream.getTracks().forEach(t => t.stop());
-      reject(new Error('Ошибка записи'));
-    };
-
+    mr.onerror = () => { stream.getTracks().forEach(t => t.stop()); reject(new Error('Ошибка записи')); };
     mr.start();
-    // Авто-стоп через 12 секунд
     setTimeout(() => { if (mr.state !== 'inactive') mr.stop(); }, 12000);
   });
 }
@@ -195,17 +171,9 @@ function recognizeViaBrowser({ lang = 'ru-RU' } = {}) {
   return new Promise((resolve, reject) => {
     if (!HAS_SR) return reject(new Error('SpeechRecognition недоступен'));
     const rec = new SR();
-    rec.lang = lang;
-    rec.continuous = false;
-    rec.interimResults = false;
-    rec.maxAlternatives = 1;
-
+    rec.lang = lang; rec.continuous = false; rec.interimResults = false; rec.maxAlternatives = 1;
     let done = false;
-    rec.onresult = (e) => {
-      done = true;
-      const txt = Array.from(e.results).map(r => r[0].transcript).join(' ').trim();
-      resolve(txt);
-    };
+    rec.onresult = (e) => { done = true; resolve(Array.from(e.results).map(r => r[0].transcript).join(' ').trim()); };
     rec.onerror = (e) => { if (!done) { done = true; reject(new Error(e.error || 'speech error')); } };
     rec.onend = () => { if (!done) { done = true; resolve(''); } };
     try { rec.start(); } catch (err) { reject(err); }
@@ -213,17 +181,11 @@ function recognizeViaBrowser({ lang = 'ru-RU' } = {}) {
   });
 }
 
-// ============ ГЛАВНАЯ ФУНКЦИЯ РАСПОЗНАВАНИЯ ============
-// В MAX: запись + (заглушка) отправка на бэкенд. Возвращает '' — текст нужно ввести вручную или дождаться бэкенда.
-// В браузере: SpeechRecognition.
 async function recognizeOnce() {
   if (MAX_BRIDGE) {
     const blob = await recordAudioViaMax();
-    // БЭКЕНДА НЕТ: выводим в консоль и возвращаем пустую строку.
-    // Когда появится бэкенд — замените на:
-    // const text = await uploadToBackend(blob); return text;
     console.log('[MAX] Аудио записано, размер:', blob.size, 'байт. Отправьте на бэкенд для STT.');
-    return ''; // пользователь увидит подсказку "введите вручную"
+    return '';
   }
   return recognizeViaBrowser();
 }
@@ -246,6 +208,9 @@ function parseVoiceToFields(raw, current) {
   const expMatch = text.match(/(?:стаж|опыт)\D{0,10}(\d{1,2})/);
   if (expMatch) out.experience = expMatch[1];
 
+  const innMatch = text.match(/(?:инн)\D{0,10}(\d{10,12})/);
+  if (innMatch) out.inn = innMatch[1];
+
   const trMap = [
     [/велосипед|вело/,'Велосипед'], [/самокат|скутер/,'Самокат'],
     [/мотоцикл|мото/,'Мотоцикл'], [/пешком|пеший/,'Пешком'], [/авто|машин|легков/,'Автомобиль'],
@@ -253,7 +218,7 @@ function parseVoiceToFields(raw, current) {
   for (const [re, val] of trMap) if (re.test(text)) { out.transport = val; break; }
 
   const fioMatch = raw.match(/([А-ЯЁ][а-яё]+)\s+([А-ЯЁ][а-яё]+)\s+([А-ЯЁ][а-яё]+)/);
-  if (fioMatch) out.fio = fioMatch[0];
+  if (fioMatch) { out.lastName = fioMatch[1]; out.firstName = fioMatch[2]; out.middleName = fioMatch[3]; }
 
   const cityMatch = raw.match(/(?:город|городе|из)\s+([А-ЯЁ][а-яё\-]+)/i);
   if (cityMatch) out.city = cityMatch[1].replace(/^./, c => c.toUpperCase());
@@ -265,45 +230,63 @@ function parseVoiceToFields(raw, current) {
 }
 
 // ============ КОМПОНЕНТ ПОЛЯ ============
-const Field = ({ label, name, value, onChange, placeholder, type='text', error, onMic, recording, disabled, children }) => (
+const Field = ({ label, name, value, onChange, placeholder, type='text', error, children }) => (
   <div className="field">
     <label className="field__label">{label}</label>
-    <div className="field__row">
-      {children ? children : (
-        <input
-          className={`input ${error ? 'input--error' : ''}`}
-          type={type} value={value} placeholder={placeholder} disabled={disabled}
-          onChange={(e) => onChange(name, e.target.value)}
-        />
-      )}
-      {onMic && (
-        <button type="button" className={`mic-btn ${recording ? 'mic-btn--rec' : ''}`}
-          title={recording ? 'Слушаю...' : 'Голосом'}
-          onClick={() => onMic(name)} disabled={disabled}>
-          {recording ? <StopIcon size={18}/> : <MicIcon size={18}/>}
-        </button>
-      )}
-    </div>
+    {children ? children : (
+      <input
+        className={`input ${error ? 'input--error' : ''}`}
+        type={type} value={value} placeholder={placeholder}
+        onChange={(e) => onChange(name, e.target.value)}
+      />
+    )}
     {error && <p className="t-caption" style={{color:'var(--danger)', marginTop:4}}>{error}</p>}
   </div>
 );
 
+// ============ СТАТУС САМОЗАНЯТОГО ============
+const SelfEmployedStatus = ({ status, onCheck, inn }) => {
+  const cls = {
+    idle: 'status--idle', pending: 'status--pending', ok: 'status--ok', err: 'status--err'
+  }[status] || 'status--idle';
+  const label = {
+    idle: 'Проверка не выполнена',
+    pending: 'Проверяем статус…',
+    ok: 'Самозанятый подтверждён',
+    err: 'Не является самозанятым / ошибка'
+  }[status];
+  return (
+    <div className="field">
+      <label className="field__label">Статус самозанятого</label>
+      <div className={`status-row ${cls}`}>
+        <span className="status-dot"/>
+        <span style={{flex:1}}>{label}</span>
+        <button type="button" className="btn btn--primary" style={{width:'auto', padding:'8px 12px', fontSize:13}}
+          disabled={status === 'pending' || !inn} onClick={onCheck}>
+          Проверить
+        </button>
+      </div>
+      <p className="t-caption" style={{marginTop:6}}>Проверка по ИНН (демо, без бэкенда)</p>
+    </div>
+  );
+};
+
 // ============ ПРИЛОЖЕНИЕ ============
 const App = () => {
-  const initial = { fio:'', phone:'', city:'', transport:'', plate:'', experience:'', email:'' };
+  const initial = {
+    lastName:'', firstName:'', middleName:'',
+    phone:'', city:'', transport:'Автомобиль', plate:'',
+    experience:'', inn:'', email:''
+  };
   const [form, setForm] = useState(initial);
   const [errors, setErrors] = useState({});
   const [toast, setToast] = useState('');
-  const [listeningField, setListeningField] = useState(null);
+  const [listening, setListening] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [micBlocked, setMicBlocked] = useState(false); // true, если окружение не поддерживает
+  const [micBlocked, setMicBlocked] = useState(false);
+  const [status, setStatus] = useState('idle');
 
-  useEffect(() => {
-    // Если MAX и платформа не поддерживает микрофон — блокируем
-    if (MAX_BRIDGE && !MAX_SUPPORTS_MIC) {
-      setMicBlocked(true);
-    }
-  }, []);
+  useEffect(() => { if (MAX_BRIDGE && !MAX_SUPPORTS_MIC) setMicBlocked(true); }, []);
 
   const showToast = (t) => { setToast(t); setTimeout(()=>setToast(''), 2000); };
   const setField = (name, val) => {
@@ -311,39 +294,14 @@ const App = () => {
     setErrors(e => ({...e, [name]: ''}));
   };
 
-  const startFieldVoice = async (name) => {
-    if (listeningField) return;
-    if (micBlocked) { showToast('Голосовой ввод недоступен в этом окружении'); return; }
-    setListeningField(name);
-    try {
-      const txt = await recognizeOnce();
-      if (txt) {
-        if (name === 'phone') {
-          const d = txt.replace(/\D/g,'');
-          setField(name, d.length >= 10 ? '+' + (d[0]==='8'?('7'+d.slice(1)):d) : txt);
-        } else {
-          setField(name, txt);
-        }
-        showToast('Записано');
-      } else {
-        // В MAX сюда попадаем всегда (бэкенда нет) — подсказываем
-        showToast(MAX_BRIDGE ? 'Аудио записано. Распознавание появится после подключения бэкенда.' : 'Не расслышал');
-      }
-    } catch (e) {
-      showToast('Ошибка: ' + e.message);
-    } finally {
-      setListeningField(null);
-    }
-  };
-
   const startFreeVoice = async () => {
-    if (listeningField) { setListeningField(null); return; }
+    if (listening) { setListening(false); return; }
     if (micBlocked) { showToast('Голосовой ввод недоступен в этом окружении'); return; }
-    setListeningField('__free__');
+    setListening(true);
     try {
       const txt = await recognizeOnce();
       if (!txt) {
-        showToast(MAX_BRIDGE ? 'Аудио записано. Распознавание появится после подключения бэкенда.' : 'Не расслышал');
+        showToast(MAX_BRIDGE ? 'Аудио записано. Информация для отладки: см. консоль.' : 'Не расслышал');
         return;
       }
       const parsed = parseVoiceToFields(txt, form);
@@ -354,18 +312,33 @@ const App = () => {
     } catch (e) {
       showToast('Ошибка: ' + e.message);
     } finally {
-      setListeningField(null);
+      setListening(false);
     }
+  };
+
+  const checkSelfEmployed = () => {
+    if (!form.inn) { showToast('Введите ИНН'); return; }
+    setStatus('pending');
+    // Бэкенда нет — имитация. Замените на реальный запрос:
+    // fetch('/api/check-self-employed', { method:'POST', body: JSON.stringify({ inn: form.inn }) })
+    setTimeout(() => {
+      // Демо-логика: ИНН из 12 цифр → считаем подтверждённым
+      setStatus(form.inn.length === 12 ? 'ok' : 'err');
+      showToast('Проверка завершена (демо)');
+    }, 900);
   };
 
   const validate = () => {
     const e = {};
-    if (!form.fio.trim() || form.fio.trim().split(/\s+/).length < 2) e.fio = 'Укажите ФИО';
+    if (!form.lastName.trim()) e.lastName = 'Укажите фамилию';
+    if (!form.firstName.trim()) e.firstName = 'Укажите имя';
     if (!/^\+7\d{10}$/.test(form.phone)) e.phone = 'Телефон +7XXXXXXXXXX';
     if (!form.city.trim()) e.city = 'Укажите город';
     if (!form.transport) e.transport = 'Выберите транспорт';
     if (!form.experience || +form.experience < 0) e.experience = 'Стаж числом';
+    if (!/^\d{10,12}$/.test(form.inn)) e.inn = 'ИНН 10 или 12 цифр';
     if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) e.email = 'Некорректный email';
+    if (status !== 'ok') e.status = 'Подтвердите статус самозанятого';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -373,7 +346,7 @@ const App = () => {
   const submit = (ev) => {
     ev.preventDefault();
     if (!validate()) { showToast('Проверьте поля'); return; }
-    console.log('SUBMIT (бэкенда нет):', form);
+    console.log('SUBMIT (бэкенда нет):', { ...form, selfEmployed: true });
     setSubmitted(true);
     showToast('Заявка отправлена (демо)');
   };
@@ -396,48 +369,61 @@ const App = () => {
           </div>
         )}
         {MAX_BRIDGE && MAX_SUPPORTS_MIC && (
-          <div className="warn" style={{background:'rgba(0,122,255,.08)', color:'#0055cc', borderColor:'rgba(0,122,255,.2)'}}>
+          <div className="warn warn--info">
             <span>ℹ️</span>
-            <span>MAX Bridge подключён. Аудио записывается, но текст появится после подключения вашего бэкенда STT.</span>
+            <span>MAX Bridge подключён. Информация для отладки.</span>
           </div>
         )}
 
         <form onSubmit={submit} className="panel">
           <h2 className="panel__title">Данные</h2>
-          <p className="t-caption" style={{marginBottom:14}}>Ввод вручную или 🎤 у поля. FAB внизу — сказать всё одной фразой.</p>
+          <p className="t-caption" style={{marginBottom:14}}>Ввод вручную. FAB внизу — сказать всё одной фразой.</p>
 
-          <Field label="ФИО" name="fio" value={form.fio} onChange={setField} placeholder="Иванов Иван Иванович"
-                 error={errors.fio} onMic={startFieldVoice} recording={listeningField==='fio'} disabled={micBlocked} />
-          <Field label="Телефон" name="phone" value={form.phone} onChange={setField} placeholder="+79001234567" type="tel"
-                 error={errors.phone} onMic={startFieldVoice} recording={listeningField==='phone'} disabled={micBlocked} />
-          <Field label="Город" name="city" value={form.city} onChange={setField} placeholder="Москва"
-                 error={errors.city} onMic={startFieldVoice} recording={listeningField==='city'} disabled={micBlocked} />
+          <div className="field">
+            <label className="field__label">ФИО</label>
+            <div className="fio-row">
+              <input className={`input ${errors.lastName ? 'input--error' : ''}`} placeholder="Фамилия"
+                value={form.lastName} onChange={(e)=>setField('lastName', e.target.value)} />
+              <input className={`input ${errors.firstName ? 'input--error' : ''}`} placeholder="Имя"
+                value={form.firstName} onChange={(e)=>setField('firstName', e.target.value)} />
+              <input className="input" placeholder="Отчество"
+                value={form.middleName} onChange={(e)=>setField('middleName', e.target.value)} />
+            </div>
+            {(errors.lastName || errors.firstName) && (
+              <p className="t-caption" style={{color:'var(--danger)', marginTop:4}}>
+                {errors.lastName || errors.firstName}
+              </p>
+            )}
+          </div>
 
-          <Field label="Транспорт" name="transport" value={form.transport} onChange={setField} error={errors.transport}
-                 onMic={startFieldVoice} recording={listeningField==='transport'} disabled={micBlocked}>
+          <Field label="Телефон" name="phone" value={form.phone} onChange={setField} placeholder="+79001234567" type="tel" error={errors.phone} />
+          <Field label="Город" name="city" value={form.city} onChange={setField} placeholder="Москва" error={errors.city} />
+
+          <Field label="Транспорт" name="transport" value={form.transport} onChange={setField} error={errors.transport}>
             <select className="select" value={form.transport} onChange={(e)=>setField('transport', e.target.value)}>
-              <option value="">— выберите —</option>
-              <option>Велосипед</option><option>Самокат</option><option>Мотоцикл</option>
-              <option>Автомобиль</option><option>Пешком</option>
+              <option>Автомобиль</option><option>Велосипед</option><option>Самокат</option>
+              <option>Мотоцикл</option><option>Пешком</option>
             </select>
           </Field>
 
-          <Field label="Номер ТС" name="plate" value={form.plate} onChange={setField} placeholder="А123ВС77"
-                 onMic={startFieldVoice} recording={listeningField==='plate'} disabled={micBlocked} />
-          <Field label="Стаж, лет" name="experience" value={form.experience} onChange={setField} placeholder="3" type="number"
-                 error={errors.experience} onMic={startFieldVoice} recording={listeningField==='experience'} disabled={micBlocked} />
-          <Field label="Email (необязательно)" name="email" value={form.email} onChange={setField} placeholder="you@example.com" type="email"
-                 error={errors.email} onMic={startFieldVoice} recording={listeningField==='email'} disabled={micBlocked} />
+          <Field label="Номер ТС" name="plate" value={form.plate} onChange={setField} placeholder="А123ВС77" />
+          <Field label="Стаж, лет" name="experience" value={form.experience} onChange={setField} placeholder="3" type="number" error={errors.experience} />
+          <Field label="ИНН" name="inn" value={form.inn} onChange={setField} placeholder="12 цифр" error={errors.inn} />
+
+          <SelfEmployedStatus status={status} onCheck={checkSelfEmployed} inn={form.inn} />
+          {errors.status && <p className="t-caption" style={{color:'var(--danger)', marginTop:-8, marginBottom:12}}>{errors.status}</p>}
+
+          <Field label="Email (необязательно)" name="email" value={form.email} onChange={setField} placeholder="you@example.com" type="email" error={errors.email} />
 
           <button type="submit" className="btn btn--primary" style={{marginTop:6}}>Отправить заявку</button>
           {submitted && <p className="ok-text">✓ Заявка отправлена (демо, без бэкенда)</p>}
         </form>
       </div>
 
-      <button className={`fab ${listeningField==='__free__' ? 'fab--rec' : ''}`}
+      <button className={`fab ${listening ? 'fab--rec' : ''}`}
         onClick={startFreeVoice} disabled={micBlocked}
         title={micBlocked ? 'Голосовой ввод недоступен' : 'Сказать всё одной фразой'}>
-        {listeningField==='__free__' ? <StopIcon size={26}/> : <MicIcon size={26}/>}
+        {listening ? <StopIcon size={26}/> : <MicIcon size={26}/>}
       </button>
 
       {toast && <div className="toast">{toast}</div>}
