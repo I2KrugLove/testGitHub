@@ -18,11 +18,11 @@
     --danger:#ff3b30; --ok:#34c759; --warn:#ff9500;
     --r-md:12px; --r-lg:16px;
     --font:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
-    --top:56px; --bottom:88px;
+    --top:56px; --composer-h:72px;
   }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);font-family:var(--font);color:var(--text);-webkit-font-smoothing:antialiased}
-  .app{max-width:520px;margin:0 auto;padding:calc(var(--top) + 16px) 16px calc(var(--bottom) + 40px)}
+  .app{max-width:520px;margin:0 auto;padding:calc(var(--top) + 16px) 16px calc(var(--composer-h) + 40px)}
 
   .top-bar{position:fixed;top:0;left:0;right:0;height:var(--top);background:rgba(245,245,247,.85);
     backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);
@@ -36,7 +36,6 @@
 
   .field{margin-bottom:14px}
   .field__label{display:block;font-size:13px;color:var(--text2);margin-bottom:6px;font-weight:500}
-  .field__row{display:flex;gap:8px;align-items:stretch}
   .input, .select{
     flex:1;font-family:inherit;font-size:15px;color:var(--text);
     background:var(--surface2);border:1px solid transparent;border-radius:var(--r-md);
@@ -46,10 +45,8 @@
   .input::placeholder{color:var(--text3)}
   .input--error{border-color:var(--danger);background:#fff5f5}
 
-  /* 3 поля ФИО в ряд */
   .fio-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
 
-  /* Статус самозанятого */
   .status-row{display:flex;align-items:center;gap:8px;padding:12px 14px;border-radius:var(--r-md);background:var(--surface2);font-size:14px}
   .status-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
   .status--ok{background:rgba(52,199,89,.12);color:#1a7a34}
@@ -74,20 +71,48 @@
   .warn--err{background:rgba(255,59,48,.1);color:#a3231b;border-color:rgba(255,59,48,.3)}
   .warn--info{background:rgba(0,122,255,.08);color:#0055cc;border-color:rgba(0,122,255,.2)}
 
-  .fab{
-    position:fixed;right:calc(50% - 260px + 16px);bottom:20px;
-    width:64px;height:64px;border-radius:50%;border:none;cursor:pointer;
-    background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;
-    box-shadow:0 8px 24px rgba(0,122,255,.4);z-index:200;transition:transform .1s, background .15s;
+  /* ====== Подвал (composer) ====== */
+  .composer{
+    position:fixed;left:0;right:0;bottom:0;
+    background:rgba(245,245,247,.92);
+    backdrop-filter:saturate(180%) blur(20px);-webkit-backdrop-filter:saturate(180%) blur(20px);
+    border-top:1px solid var(--border);z-index:200;
+    padding:8px 0 calc(8px + env(safe-area-inset-bottom));
   }
-  @media (max-width:552px){ .fab{right:16px} }
-  .fab:active{transform:scale(.94)}
-  .fab--rec{background:var(--danger);box-shadow:0 8px 24px rgba(255,59,48,.45);animation:pulse 1s infinite}
-  .fab:disabled{opacity:.4;cursor:not-allowed;animation:none}
+  .composer__inner{
+    max-width:520px;margin:0 auto;padding:0 12px;
+    display:flex;align-items:flex-end;gap:8px;
+  }
+  .composer__ta{
+    flex:1;font-family:inherit;font-size:15px;color:var(--text);
+    background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);
+    padding:10px 14px;outline:none;resize:none;max-height:120px;min-height:44px;line-height:1.4;
+    transition:border-color .15s;
+  }
+  .composer__ta:focus{border-color:var(--primary)}
+  .composer__ta::placeholder{color:var(--text3)}
+
+  .composer__btn{
+    flex:0 0 44px;width:44px;height:44px;border-radius:50%;border:none;cursor:pointer;
+    background:var(--surface2);color:var(--text);display:flex;align-items:center;justify-content:center;
+    transition:background .15s, transform .05s, color .15s, opacity .15s;
+  }
+  .composer__btn:hover:not(:disabled){background:var(--surface3)}
+  .composer__btn:active:not(:disabled){transform:scale(.94)}
+  .composer__btn:disabled{opacity:.4;cursor:not-allowed}
+  .composer__btn--rec{background:var(--danger);color:#fff;animation:pulse 1s infinite}
+  .composer__btn--send{background:var(--primary);color:#fff}
+  .composer__btn--send:hover:not(:disabled){background:var(--primaryH)}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.65}}
 
+  .attach-preview{
+    max-width:520px;margin:0 auto 6px;padding:0 12px;font-size:13px;color:var(--text2);
+    display:flex;align-items:center;gap:6px;
+  }
+  .attach-preview button{background:none;border:none;color:var(--danger);cursor:pointer;font-size:13px;padding:0}
+
   .toast{
-    position:fixed;left:50%;bottom:100px;transform:translateX(-50%);
+    position:fixed;left:50%;bottom:calc(var(--composer-h) + 20px);transform:translateX(-50%);
     background:rgba(0,0,0,.85);color:#fff;padding:10px 16px;border-radius:999px;font-size:14px;
     z-index:300;max-width:90vw;text-align:center;
   }
@@ -98,7 +123,7 @@
 <div id="root"></div>
 
 <script type="text/babel">
-const { useState, useEffect } = React;
+const { useState, useEffect, useRef } = React;
 
 // ============ ИКОНКИ ============
 const MicIcon = ({size=20}) => (
@@ -110,6 +135,17 @@ const MicIcon = ({size=20}) => (
 );
 const StopIcon = ({size=20}) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+);
+const PaperclipIcon = ({size=20}) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+  </svg>
+);
+const SendIcon = ({size=20}) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="12" y1="19" x2="12" y2="5"/>
+    <polyline points="5 12 12 5 19 12"/>
+  </svg>
 );
 const AlertIcon = ({size=16}) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -126,7 +162,6 @@ const MAX_SUPPORTS_MIC = MAX_BRIDGE && (MAX_PLATFORM === 'android' || MAX_PLATFO
 // ============ ЗАПИСЬ АУДИО (MAX) ============
 async function recordAudioViaMax() {
   if (!MAX_SUPPORTS_MIC) throw new Error('Микрофон в MAX доступен только на Android и в веб-клиенте');
-
   const PM = window.WebApp.PermissionsManager;
   if (PM) {
     const requestFn = PM.requestMicrophone || PM.requestPermission;
@@ -136,10 +171,7 @@ async function recordAudioViaMax() {
     } else {
       throw new Error('Текущая версия MAX не поддерживает запрос микрофона через Bridge');
     }
-  } else {
-    console.warn('PermissionsManager не найден, пробуем стандартный getUserMedia');
   }
-
   let stream;
   try { stream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
   catch (e) { throw new Error('Не удалось получить доступ к микрофону: ' + e.message); }
@@ -149,7 +181,6 @@ async function recordAudioViaMax() {
     let mr;
     try { mr = new MediaRecorder(stream); }
     catch (e) { stream.getTracks().forEach(t => t.stop()); reject(new Error('MediaRecorder не поддерживается: ' + e.message)); return; }
-
     mr.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
     mr.onstop = () => {
       stream.getTracks().forEach(t => t.stop());
@@ -201,13 +232,10 @@ function parseVoiceToFields(raw, current) {
     if (d.length === 11 && (d[0]==='8'||d[0]==='7')) d = '7' + d.slice(1);
     out.phone = '+' + d;
   }
-
   const emailMatch = raw.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
   if (emailMatch) out.email = emailMatch[0];
-
   const expMatch = text.match(/(?:стаж|опыт)\D{0,10}(\d{1,2})/);
   if (expMatch) out.experience = expMatch[1];
-
   const innMatch = text.match(/(?:инн)\D{0,10}(\d{10,12})/);
   if (innMatch) out.inn = innMatch[1];
 
@@ -246,14 +274,10 @@ const Field = ({ label, name, value, onChange, placeholder, type='text', error, 
 
 // ============ СТАТУС САМОЗАНЯТОГО ============
 const SelfEmployedStatus = ({ status, onCheck, inn }) => {
-  const cls = {
-    idle: 'status--idle', pending: 'status--pending', ok: 'status--ok', err: 'status--err'
-  }[status] || 'status--idle';
+  const cls = { idle:'status--idle', pending:'status--pending', ok:'status--ok', err:'status--err' }[status] || 'status--idle';
   const label = {
-    idle: 'Проверка не выполнена',
-    pending: 'Проверяем статус…',
-    ok: 'Самозанятый подтверждён',
-    err: 'Не является самозанятым / ошибка'
+    idle:'Проверка не выполнена', pending:'Проверяем статус…',
+    ok:'Самозанятый подтверждён', err:'Не является самозанятым / ошибка'
   }[status];
   return (
     <div className="field">
@@ -262,9 +286,7 @@ const SelfEmployedStatus = ({ status, onCheck, inn }) => {
         <span className="status-dot"/>
         <span style={{flex:1}}>{label}</span>
         <button type="button" className="btn btn--primary" style={{width:'auto', padding:'8px 12px', fontSize:13}}
-          disabled={status === 'pending' || !inn} onClick={onCheck}>
-          Проверить
-        </button>
+          disabled={status === 'pending' || !inn} onClick={onCheck}>Проверить</button>
       </div>
       <p className="t-caption" style={{marginTop:6}}>Проверка по ИНН (демо, без бэкенда)</p>
     </div>
@@ -286,6 +308,12 @@ const App = () => {
   const [micBlocked, setMicBlocked] = useState(false);
   const [status, setStatus] = useState('idle');
 
+  // composer
+  const [draft, setDraft] = useState('');
+  const [attach, setAttach] = useState(null); // { name, size, type }
+  const taRef = useRef(null);
+  const fileRef = useRef(null);
+
   useEffect(() => { if (MAX_BRIDGE && !MAX_SUPPORTS_MIC) setMicBlocked(true); }, []);
 
   const showToast = (t) => { setToast(t); setTimeout(()=>setToast(''), 2000); };
@@ -294,7 +322,16 @@ const App = () => {
     setErrors(e => ({...e, [name]: ''}));
   };
 
-  const startFreeVoice = async () => {
+  // автовысота textarea
+  const autoGrow = () => {
+    const el = taRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+  };
+
+  // микрофон: голос → разбор → заполнение полей
+  const onMic = async () => {
     if (listening) { setListening(false); return; }
     if (micBlocked) { showToast('Голосовой ввод недоступен в этом окружении'); return; }
     setListening(true);
@@ -316,13 +353,44 @@ const App = () => {
     }
   };
 
+  // скрепка
+  const onAttachClick = () => fileRef.current && fileRef.current.click();
+  const onAttachChange = (e) => {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    setAttach({ name: f.name, size: f.size, type: f.type });
+    showToast('Файл прикреплён: ' + f.name);
+    e.target.value = '';
+  };
+  const clearAttach = () => setAttach(null);
+
+  // отправить
+  const onSend = () => {
+    const text = draft.trim();
+    if (!text && !attach) { showToast('Введите текст или прикрепите файл'); return; }
+    // Если есть текст — пробуем применить к форме
+    if (text) {
+      const parsed = parseVoiceToFields(text, form);
+      const changed = Object.keys(parsed).filter(k => parsed[k] && parsed[k] !== form[k]);
+      if (changed.length) {
+        setForm(parsed);
+        showToast(`Применено: ${changed.join(', ')}`);
+      } else {
+        showToast('Отправлено (демо, без бэкенда)');
+      }
+    } else {
+      showToast('Файл отправлен (демо, без бэкенда)');
+    }
+    console.log('SEND', { text, attach });
+    setDraft('');
+    setAttach(null);
+    if (taRef.current) { taRef.current.style.height = 'auto'; }
+  };
+
   const checkSelfEmployed = () => {
     if (!form.inn) { showToast('Введите ИНН'); return; }
     setStatus('pending');
-    // Бэкенда нет — имитация. Замените на реальный запрос:
-    // fetch('/api/check-self-employed', { method:'POST', body: JSON.stringify({ inn: form.inn }) })
     setTimeout(() => {
-      // Демо-логика: ИНН из 12 цифр → считаем подтверждённым
       setStatus(form.inn.length === 12 ? 'ok' : 'err');
       showToast('Проверка завершена (демо)');
     }, 900);
@@ -377,7 +445,9 @@ const App = () => {
 
         <form onSubmit={submit} className="panel">
           <h2 className="panel__title">Данные</h2>
-          <p className="t-caption" style={{marginBottom:14}}>Ввод вручную. FAB внизу — сказать всё одной фразой.</p>
+          <p className="t-caption" style={{marginBottom:14}}>
+            Ввод вручную или в подвале: микрофон — голосом, скрепка — файл, стрелка — отправить.
+          </p>
 
           <div className="field">
             <label className="field__label">ФИО</label>
@@ -420,11 +490,41 @@ const App = () => {
         </form>
       </div>
 
-      <button className={`fab ${listening ? 'fab--rec' : ''}`}
-        onClick={startFreeVoice} disabled={micBlocked}
-        title={micBlocked ? 'Голосовой ввод недоступен' : 'Сказать всё одной фразой'}>
-        {listening ? <StopIcon size={26}/> : <MicIcon size={26}/>}
-      </button>
+      {/* ===== Подвал ===== */}
+      <div className="composer">
+        {attach && (
+          <div className="attach-preview">
+            <span>📎 {attach.name} ({Math.round(attach.size/1024)} КБ)</span>
+            <button type="button" onClick={clearAttach}>✕</button>
+          </div>
+        )}
+        <div className="composer__inner">
+          <button type="button" className="composer__btn" title="Прикрепить файл" onClick={onAttachClick}>
+            <PaperclipIcon />
+          </button>
+          <input ref={fileRef} type="file" hidden accept="image/*,audio/*,.pdf,.txt,.doc,.docx" onChange={onAttachChange} />
+
+          <textarea
+            ref={taRef}
+            className="composer__ta"
+            placeholder="Сообщение или голосовая команда…"
+            rows={1}
+            value={draft}
+            onChange={(e)=>{ setDraft(e.target.value); autoGrow(); }}
+            onKeyDown={(e)=>{ if (e.key==='Enter' && !e.shiftKey) { e.preventDefault(); onSend(); } }}
+          />
+
+          <button type="button" className={`composer__btn ${listening ? 'composer__btn--rec' : ''}`}
+            title={listening ? 'Остановить' : 'Голосом'} onClick={onMic} disabled={micBlocked}>
+            {listening ? <StopIcon size={18}/> : <MicIcon size={18}/>}
+          </button>
+
+          <button type="button" className="composer__btn composer__btn--send"
+            title="Отправить" onClick={onSend}>
+            <SendIcon size={20}/>
+          </button>
+        </div>
+      </div>
 
       {toast && <div className="toast">{toast}</div>}
     </React.Fragment>
